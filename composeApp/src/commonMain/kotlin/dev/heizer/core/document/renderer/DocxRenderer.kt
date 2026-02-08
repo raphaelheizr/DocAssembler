@@ -82,7 +82,7 @@ class DocxRenderer : DocumentRenderer {
         for (i in range) {
             val element = bodyElements.getOrNull(i)
             if (element is XWPFParagraph) {
-                copyParagraph(element, target.createParagraph(), parentStyles)
+                copyParagraph(element, target.createParagraph())
             }
         }
     }
@@ -104,7 +104,9 @@ class DocxRenderer : DocumentRenderer {
         )
 
         if (pText.trim() == "{%}") {
-            node.children.forEach { renderNodeTo(it, targetDoc, currentStyles) }
+            if (node.children.isNotEmpty()) {
+                node.children.forEach { renderNodeTo(it, targetDoc, currentStyles) }
+            }
         } else {
             renderInlinePlaceholder(node, placeholderParagraph, targetDoc, currentStyles)
         }
@@ -126,9 +128,14 @@ class DocxRenderer : DocumentRenderer {
                 foundInRun = true
                 processRunLeavingPlaceholder(node, run, newP, targetDoc, placeholderParagraph, parentStyles)
             } else if (foundInRun) {
+                // Se já processamos o run do placeholder, os runs subsequentes devem ir para o ÚLTIMO parágrafo gerado
+                // (que pode ser o newP ou um novo parágrafo criado após um interpolado)
                 val lastP = targetDoc.paragraphs.last()
                 copyRun(run, lastP.createRun())
             } else {
+                // Se o run CONTÉM {%}, ele deve ser processado pela lógica de interpolação.
+                // Mas o loop atual verifica apenas se foundInRun já é true.
+                // Se o run atual tiver {%} e for o primeiro, ele entra no primeiro IF.
                 copyRun(run, newP.createRun())
             }
         }
@@ -143,7 +150,9 @@ class DocxRenderer : DocumentRenderer {
         parentStyles: ParentStyles
     ) {
         val runText = run.getText(0) ?: ""
-        val parts = runText.split("{%}", limit = 2)
+        // Substituir apenas a primeira ocorrência do placeholder para evitar problemas se houver múltiplos (embora não esperado)
+        val placeholder = "{%}"
+        val parts = runText.split(placeholder, limit = 2)
 
         // Parte antes do placeholder no mesmo run
         if (parts[0].isNotEmpty()) {
@@ -153,15 +162,25 @@ class DocxRenderer : DocumentRenderer {
         }
 
         // Interpolar filhos
-        node.children.forEach { renderNodeTo(it, targetDoc, parentStyles) }
+        if (node.children.isNotEmpty()) {
+            node.children.forEach { renderNodeTo(it, targetDoc, parentStyles) }
+        }
 
         // Parte depois do placeholder no mesmo run
-        if (parts[1].isNotEmpty()) {
+        if (parts.size > 1 && parts[1].isNotEmpty()) {
             val rAfterP = targetDoc.createParagraph()
             rAfterP.ctp.pPr = placeholderParagraph.ctp.pPr
             val rAfter = rAfterP.createRun()
             copyRunStyles(run, rAfter)
             rAfter.setText(parts[1], 0)
+        } else if (node.children.isEmpty() && parts[0].isEmpty() && currentP.runs.isEmpty()) {
+            // Se não tem filhos, o prefixo é vazio, e não há outros runs no parágrafo atual,
+            // então este parágrafo que criamos para o inline está vazio e deve ser removido
+            // para que {%} não deixe um rastro de linha vazia.
+            val pos = targetDoc.getPosOfParagraph(currentP)
+            if (pos != -1) {
+                targetDoc.removeBodyElement(pos)
+            }
         }
     }
 
@@ -169,32 +188,25 @@ class DocxRenderer : DocumentRenderer {
         for (element in source.bodyElements) {
             if (element is XWPFParagraph) {
                 val newP = target.createParagraph()
-                copyParagraph(element, newP, parentStyles)
+                copyParagraph(element, newP)
             }
             // Outros elementos como XWPFTable poderiam ser adicionados aqui
         }
     }
 
-    private fun copyParagraph(source: XWPFParagraph, target: XWPFParagraph, parentStyles: ParentStyles? = null) {
-        if (parentStyles?.paragraphProperties != null) {
-            target.ctp.pPr = parentStyles.paragraphProperties
-        } else {
-            target.ctp.pPr = source.ctp.pPr
-        }
+    private fun copyParagraph(source: XWPFParagraph, target: XWPFParagraph) {
+        target.ctp.pPr = source.ctp.pPr
         
         for (run in source.runs) {
             val targetRun = target.createRun()
-            copyRun(run, targetRun, parentStyles?.runProperties)
+            copyRun(run, targetRun)
         }
     }
 
-    private fun copyRun(source: XWPFRun, target: XWPFRun, parentRunProperties: org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr? = null) {
-        if (parentRunProperties != null) {
-            target.ctr.rPr = parentRunProperties
-        } else {
-            copyRunStyles(source, target)
-        }
-        target.setText(source.getText(0))
+    private fun copyRun(source: XWPFRun, target: XWPFRun) {
+        copyRunStyles(source, target)
+        val text = source.getText(0) ?: ""
+        target.setText(text.replace("{%}", ""))
     }
 
     private fun copyRunStyles(source: XWPFRun, target: XWPFRun) {

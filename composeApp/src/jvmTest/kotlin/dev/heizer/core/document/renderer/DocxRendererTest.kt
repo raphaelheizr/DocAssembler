@@ -99,4 +99,63 @@ class DocxRendererTest {
             renderer.render(document, "build/test-output/error.docx")
         }
     }
+
+    @Test
+    fun testStylesPreservationAndPlaceholderRemoval() {
+        val templateDir = File("build/test-templates")
+        templateDir.mkdirs()
+
+        // Template pai com placeholder
+        val parentTemplate = File(templateDir, "parent_styles.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.createRun().setText("Pai: ")
+            p.createRun().setText("{%}")
+            FileOutputStream(parentTemplate).use { doc.write(it) }
+        }
+
+        // Template filho com seu próprio estilo (ex: Negrito)
+        val childTemplate = File(templateDir, "child_styles.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            val r = p.createRun()
+            r.setText("Filho Negrito")
+            r.isBold = true
+            FileOutputStream(childTemplate).use { doc.write(it) }
+        }
+
+        // Cenário 1: Com filho
+        val docWithChild = Document(
+            Document.Metadata("Com Filho", "none"),
+            listOf(DocumentNode(1, parentTemplate.path, listOf(DocumentNode(2, childTemplate.path))))
+        )
+
+        val renderer = DocxRenderer()
+        val out1 = "build/test-output/styles_with_child.docx"
+        renderer.render(docWithChild, out1)
+
+        XWPFDocument(File(out1).inputStream()).use { doc ->
+            val p = doc.paragraphs.find { it.text.contains("Filho Negrito") }
+            assertTrue(p != null, "Deve conter o texto do filho")
+            assertTrue(p!!.runs.any { it.isBold }, "O estilo negrito do filho deve ser preservado")
+            assertTrue(!doc.paragraphs.any { it.text.contains("{%}") }, "O placeholder não deve estar presente")
+        }
+
+        // Cenário 2: Sem filho (placeholder deve sumir)
+        val docWithoutChild = Document(
+            Document.Metadata("Sem Filho", "none"),
+            listOf(DocumentNode(1, parentTemplate.path, emptyList()))
+        )
+        val out2 = "build/test-output/styles_no_child.docx"
+        renderer.render(docWithoutChild, out2)
+
+        XWPFDocument(File(out2).inputStream()).use { doc ->
+            val texts = doc.paragraphs.map { it.text }
+            assertTrue(texts.any { it.contains("Pai: ") }, "Deve conter o texto do pai")
+            assertTrue(!texts.any { it.contains("{%}") }, "O placeholder deve ter sido removido")
+            // Verifica se não sobrou parágrafo vazio onde estava o {%} se ele era o único no parágrafo
+            // No nosso caso o parágrafo tem "Pai: {%}", então deve sobrar "Pai: "
+            assertTrue(texts.any { it.trim() == "Pai:" }, "Deve conter 'Pai:' sem o placeholder. Texto atual: ${texts}")
+        }
+    }
 }
