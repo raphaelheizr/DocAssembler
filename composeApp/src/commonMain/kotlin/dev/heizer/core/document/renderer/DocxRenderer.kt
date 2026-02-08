@@ -29,27 +29,33 @@ class DocxRenderer : DocumentRenderer {
         resultDocument.close()
     }
 
-    private fun renderNodeTo(node: DocumentNode, targetDoc: XWPFDocument) {
+    private fun renderNodeTo(node: DocumentNode, targetDoc: XWPFDocument, parentStyles: ParentStyles? = null) {
         val templateDoc = loadTemplate(node.templatePath)
         templateDoc.use { doc ->
             if (node.children.isEmpty()) {
-                appendDocument(targetDoc, doc)
+                appendDocument(targetDoc, doc, parentStyles)
             } else {
-                renderWithInterpolation(node, doc, targetDoc)
+                renderWithInterpolation(node, doc, targetDoc, parentStyles)
             }
         }
     }
 
+    data class ParentStyles(
+        val paragraphProperties: org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr?,
+        val runProperties: org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr?
+    )
+
     private fun loadTemplate(path: String): XWPFDocument {
         val templateFile = File(path)
-        require(!templateFile.exists()) { "Template não encontrado: $path" }
+        require(templateFile.exists()) { "Template não encontrado: $path" }
         return FileInputStream(templateFile).use { XWPFDocument(it) }
     }
 
     private fun renderWithInterpolation(
         node: DocumentNode,
         templateDoc: XWPFDocument,
-        targetDoc: XWPFDocument
+        targetDoc: XWPFDocument,
+        parentStyles: ParentStyles? = null
     ) {
         val placeholderParagraph = findPlaceholderParagraph(templateDoc)
             ?: throw IllegalStateException("Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}")
@@ -58,25 +64,25 @@ class DocxRenderer : DocumentRenderer {
         val bodyElements = templateDoc.bodyElements
 
         // Copiar parágrafos ANTES do placeholder
-        copyParagraphsInRange(templateDoc, targetDoc, 0 until elementPos)
+        copyParagraphsInRange(templateDoc, targetDoc, 0 until elementPos, parentStyles)
 
         // Tratar o parágrafo do placeholder
-        processPlaceholder(node, placeholderParagraph, targetDoc)
+        processPlaceholder(node, placeholderParagraph, targetDoc, parentStyles)
 
         // Copiar parágrafos DEPOIS do placeholder
-        copyParagraphsInRange(templateDoc, targetDoc, (elementPos + 1) until bodyElements.size)
+        copyParagraphsInRange(templateDoc, targetDoc, (elementPos + 1) until bodyElements.size, parentStyles)
     }
 
     private fun findPlaceholderParagraph(doc: XWPFDocument): XWPFParagraph? {
         return doc.paragraphs.find { it.text.contains("{%}") }
     }
 
-    private fun copyParagraphsInRange(source: XWPFDocument, target: XWPFDocument, range: IntRange) {
+    private fun copyParagraphsInRange(source: XWPFDocument, target: XWPFDocument, range: IntRange, parentStyles: ParentStyles? = null) {
         val bodyElements = source.bodyElements
         for (i in range) {
             val element = bodyElements.getOrNull(i)
             if (element is XWPFParagraph) {
-                copyParagraph(element, target.createParagraph())
+                copyParagraph(element, target.createParagraph(), parentStyles)
             }
         }
     }
@@ -84,20 +90,31 @@ class DocxRenderer : DocumentRenderer {
     private fun processPlaceholder(
         node: DocumentNode,
         placeholderParagraph: XWPFParagraph,
-        targetDoc: XWPFDocument
+        targetDoc: XWPFDocument,
+        parentStyles: ParentStyles? = null
     ) {
         val pText = placeholderParagraph.text
+        
+        // Determinar os estilos que serão passados para os filhos
+        // Se já temos parentStyles vindo de cima, continuamos usando-os (conforme requisito de usar estilo do documento-pai)
+        // Se não temos, os estilos deste placeholder (que é o pai para os próximos) serão os novos parentStyles.
+        val currentStyles = parentStyles ?: ParentStyles(
+            placeholderParagraph.ctp.pPr,
+            placeholderParagraph.runs.find { (it.getText(0) ?: "").contains("{%}") }?.ctr?.rPr
+        )
+
         if (pText.trim() == "{%}") {
-            node.children.forEach { renderNodeTo(it, targetDoc) }
+            node.children.forEach { renderNodeTo(it, targetDoc, currentStyles) }
         } else {
-            renderInlinePlaceholder(node, placeholderParagraph, targetDoc)
+            renderInlinePlaceholder(node, placeholderParagraph, targetDoc, currentStyles)
         }
     }
 
     private fun renderInlinePlaceholder(
         node: DocumentNode,
         placeholderParagraph: XWPFParagraph,
-        targetDoc: XWPFDocument
+        targetDoc: XWPFDocument,
+        parentStyles: ParentStyles
     ) {
         val newP = targetDoc.createParagraph()
         newP.ctp.pPr = placeholderParagraph.ctp.pPr
@@ -107,7 +124,7 @@ class DocxRenderer : DocumentRenderer {
             val runText = run.getText(0) ?: ""
             if (!foundInRun && runText.contains("{%}")) {
                 foundInRun = true
-                processRunLeavingPlaceholder(node, run, newP, targetDoc, placeholderParagraph)
+                processRunLeavingPlaceholder(node, run, newP, targetDoc, placeholderParagraph, parentStyles)
             } else if (foundInRun) {
                 val lastP = targetDoc.paragraphs.last()
                 copyRun(run, lastP.createRun())
@@ -122,7 +139,8 @@ class DocxRenderer : DocumentRenderer {
         run: XWPFRun,
         currentP: XWPFParagraph,
         targetDoc: XWPFDocument,
-        placeholderParagraph: XWPFParagraph
+        placeholderParagraph: XWPFParagraph,
+        parentStyles: ParentStyles
     ) {
         val runText = run.getText(0) ?: ""
         val parts = runText.split("{%}", limit = 2)
@@ -135,7 +153,7 @@ class DocxRenderer : DocumentRenderer {
         }
 
         // Interpolar filhos
-        node.children.forEach { renderNodeTo(it, targetDoc) }
+        node.children.forEach { renderNodeTo(it, targetDoc, parentStyles) }
 
         // Parte depois do placeholder no mesmo run
         if (parts[1].isNotEmpty()) {
@@ -147,26 +165,35 @@ class DocxRenderer : DocumentRenderer {
         }
     }
 
-    private fun appendDocument(target: XWPFDocument, source: XWPFDocument) {
+    private fun appendDocument(target: XWPFDocument, source: XWPFDocument, parentStyles: ParentStyles? = null) {
         for (element in source.bodyElements) {
             if (element is XWPFParagraph) {
                 val newP = target.createParagraph()
-                copyParagraph(element, newP)
+                copyParagraph(element, newP, parentStyles)
             }
             // Outros elementos como XWPFTable poderiam ser adicionados aqui
         }
     }
 
-    private fun copyParagraph(source: XWPFParagraph, target: XWPFParagraph) {
-        target.ctp.pPr = source.ctp.pPr
+    private fun copyParagraph(source: XWPFParagraph, target: XWPFParagraph, parentStyles: ParentStyles? = null) {
+        if (parentStyles?.paragraphProperties != null) {
+            target.ctp.pPr = parentStyles.paragraphProperties
+        } else {
+            target.ctp.pPr = source.ctp.pPr
+        }
+        
         for (run in source.runs) {
             val targetRun = target.createRun()
-            copyRun(run, targetRun)
+            copyRun(run, targetRun, parentStyles?.runProperties)
         }
     }
 
-    private fun copyRun(source: XWPFRun, target: XWPFRun) {
-        copyRunStyles(source, target)
+    private fun copyRun(source: XWPFRun, target: XWPFRun, parentRunProperties: org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr? = null) {
+        if (parentRunProperties != null) {
+            target.ctr.rPr = parentRunProperties
+        } else {
+            copyRunStyles(source, target)
+        }
         target.setText(source.getText(0))
     }
 

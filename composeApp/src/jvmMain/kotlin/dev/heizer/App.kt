@@ -49,13 +49,31 @@ fun App() {
                     )
                 }
 
+                if (viewModel.pendingDeleteNode != null) {
+                    AlertDialog(
+                        onDismissRequest = { viewModel.cancelDelete() },
+                        confirmButton = {
+                            TextButton(onClick = { viewModel.confirmDeleteNode(viewModel.pendingDeleteNode!!.id) }) {
+                                Text("Confirmar")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { viewModel.cancelDelete() }) {
+                                Text("Cancelar")
+                            }
+                        },
+                        title = { Text("Confirmar Exclusão") },
+                        text = { Text("Este nodo possui filhos. Excluir este nodo também excluirá todos os seus filhos. Deseja continuar?") }
+                    )
+                }
+
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Esquerda: Árvore do Documento
                     Box(modifier = Modifier.weight(0.4f).fillMaxHeight().background(Color.LightGray.copy(alpha = 0.2f)).padding(8.dp)) {
                         Column {
                             Text("Estrutura do Documento", style = MaterialTheme.typography.titleMedium)
                             Spacer(modifier = Modifier.height(8.dp))
-                            TreeView(viewModel.document, viewModel.selectedNodeId, onSelect = { viewModel.selectNode(it) })
+                            TreeView(viewModel.document, viewModel.selectedNodeId, onSelect = { viewModel.selectNode(it) }, onDelete = { viewModel.requestDeleteNode(it) })
                         }
                     }
 
@@ -85,20 +103,20 @@ fun App() {
 }
 
 @Composable
-fun TreeView(document: Document, selectedId: Long?, onSelect: (Long) -> Unit) {
+fun TreeView(document: Document, selectedId: Long?, onSelect: (Long) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column {
         Text(
             text = "📄 ${document.metadata.name}",
             modifier = Modifier.padding(vertical = 4.dp)
         )
         document.nodes.forEach { node ->
-            NodeView(node, selectedId, onSelect)
+            NodeView(node, selectedId, onSelect, onDelete)
         }
     }
 }
 
 @Composable
-fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit) {
+fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         val isSelected = node.id == selectedId
         
@@ -123,13 +141,21 @@ fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit) {
                 Text(
                     text = "ID: ${node.id % 1000} - ${node.templatePath.split("/").last()}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = { onDelete(node) }, modifier = Modifier.size(24.dp)) {
+                    Text(
+                        text = "X",
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             }
         }
 
         node.children.forEach { child ->
-            NodeView(child, selectedId, onSelect)
+            NodeView(child, selectedId, onSelect, onDelete)
         }
     }
 }

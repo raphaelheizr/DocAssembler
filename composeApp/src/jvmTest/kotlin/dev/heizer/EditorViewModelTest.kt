@@ -50,4 +50,39 @@ class EditorViewModelTest {
         assertEquals(1, vm.document.nodes[0].children.size, "First node should have one child")
         assertEquals("templates/paragraph.docx", vm.document.nodes[0].children[0].templatePath)
     }
+
+    @Test
+    fun testRemoveNodeWithoutChildrenExecutesImmediately() {
+        val vm = EditorViewModel()
+        val def = DocumentNodeDefinition("1", "Test", "Desc", "templates/title.docx")
+        vm.addComponent(def)
+        val nodeId = vm.document.nodes.first().id
+        
+        vm.requestDeleteNode(vm.document.nodes.first())
+        
+        assertTrue(vm.document.nodes.isEmpty(), "Node should be removed immediately since it has no children")
+        assertNull(vm.pendingDeleteNode, "Should not have pending delete")
+    }
+
+    @Test
+    fun testRemoveNodeWithChildrenAsksForConfirmation() {
+        val vm = EditorViewModel()
+        val def1 = DocumentNodeDefinition("1", "Parent", "Desc", "templates/title.docx")
+        val def2 = DocumentNodeDefinition("2", "Child", "Desc", "templates/paragraph.docx")
+        
+        vm.addComponent(def1)
+        vm.selectNode(vm.document.nodes.first().id)
+        vm.addComponent(def2)
+        
+        val parentNode = vm.document.nodes.first()
+        vm.requestDeleteNode(parentNode)
+        
+        assertFalse(vm.document.nodes.isEmpty(), "Node should NOT be removed yet")
+        assertNotNull(vm.pendingDeleteNode, "Should have pending delete")
+        assertEquals(parentNode.id, vm.pendingDeleteNode?.id)
+        
+        vm.confirmDeleteNode(parentNode.id)
+        assertTrue(vm.document.nodes.isEmpty(), "Node and children should be removed after confirmation")
+        assertNull(vm.pendingDeleteNode, "Pending delete should be cleared")
+    }
 }

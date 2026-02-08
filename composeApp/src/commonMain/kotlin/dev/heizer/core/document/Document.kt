@@ -30,6 +30,22 @@ data class Document(
         return this.copy(nodes = newNodes)
     }
 
+    fun removeNode(nodeId: Long): Document {
+        val newNodes = removeNodeFromList(nodes, nodeId)
+        return this.copy(nodes = newNodes)
+    }
+
+    private fun removeNodeFromList(nodes: List<DocumentNode>, nodeId: Long): List<DocumentNode> {
+        return nodes.filter { it.id != nodeId }
+            .map { node ->
+                if (node.children.isNotEmpty()) {
+                    node.copy(children = removeNodeFromList(node.children, nodeId))
+                } else {
+                    node
+                }
+            }
+    }
+
     private fun addChildToNode(nodes: List<DocumentNode>, targetId: Long, newNode: DocumentNode): List<DocumentNode> {
         return nodes.map { node ->
             if (node.id == targetId) {

@@ -6,22 +6,29 @@ import androidx.compose.runtime.setValue
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
+import dev.heizer.core.document.DocumentNodeDefinitionRegistry
 import dev.heizer.core.document.renderer.DocxRenderer
+import dev.heizer.core.file.FileRepository
+import dev.heizer.core.serializer.JsonSerializer
 
 class EditorViewModel {
     var document by mutableStateOf(Document.create("Novo Documento"))
     
-    var definitions by mutableStateOf(
-        listOf(
-            DocumentNodeDefinition("1", "Título", "Componente de título", "templates/title.docx"),
-            DocumentNodeDefinition("2", "Parágrafo", "Componente de parágrafo", "templates/paragraph.docx"),
-            DocumentNodeDefinition("3", "Assinatura", "Componente de assinatura", "templates/signature.docx")
-        )
-    )
-
-    var selectedNodeId by mutableStateOf<Long?>(null)
+    var definitions by mutableStateOf<List<DocumentNodeDefinition>>(emptyList())
 
     var errorMessage by mutableStateOf<String?>(null)
+
+    init {
+        try {
+            val repository = FileRepository(JsonSerializer.create<DocumentNodeDefinitionRegistry>())
+            val registry = DocumentNodeDefinitionRegistry.Factory.load(repository)
+            definitions = registry.definitions
+        } catch (e: Exception) {
+            errorMessage = "Erro ao carregar definições: ${e.message}"
+        }
+    }
+
+    var selectedNodeId by mutableStateOf<Long?>(null)
 
     fun selectNode(id: Long) {
         selectedNodeId = id
@@ -32,6 +39,28 @@ class EditorViewModel {
         val newNode = DocumentNode(newNodeId, definition.templateDocPath)
         
         document = document.addNode(selectedNodeId, newNode)
+    }
+
+    var pendingDeleteNode by mutableStateOf<DocumentNode?>(null)
+
+    fun requestDeleteNode(node: DocumentNode) {
+        if (node.children.isNotEmpty()) {
+            pendingDeleteNode = node
+        } else {
+            confirmDeleteNode(node.id)
+        }
+    }
+
+    fun confirmDeleteNode(nodeId: Long) {
+        document = document.removeNode(nodeId)
+        if (selectedNodeId == nodeId) {
+            selectedNodeId = null
+        }
+        pendingDeleteNode = null
+    }
+
+    fun cancelDelete() {
+        pendingDeleteNode = null
     }
 
     fun generateDocument() {
