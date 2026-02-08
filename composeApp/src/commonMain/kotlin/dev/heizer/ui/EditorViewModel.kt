@@ -7,7 +7,7 @@ import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.core.document.DocumentNodeDefinitionRegistry
-import dev.heizer.core.document.renderer.DocxRenderer
+import dev.heizer.core.document.renderer.docx.DocxRenderer
 import dev.heizer.core.file.FileRepository
 import dev.heizer.core.serializer.JsonSerializer
 

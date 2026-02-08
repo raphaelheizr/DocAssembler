@@ -1,5 +1,6 @@
-package dev.heizer.core.document.renderer.model
+package dev.heizer.core.document.renderer.docx.model
 
+import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyle
@@ -34,7 +35,7 @@ class StyleRegistry {
     
     fun getAllStyles(): Collection<CTStyle> = styles.values
 
-    fun ensure(styleId: String, sourceDoc: org.apache.poi.xwpf.usermodel.XWPFDocument): String {
+    fun ensure(styleId: String, sourceDoc: XWPFDocument): String {
         if (!styles.containsKey(styleId)) {
             val sourceStyles = sourceDoc.styles
             if (sourceStyles != null) {

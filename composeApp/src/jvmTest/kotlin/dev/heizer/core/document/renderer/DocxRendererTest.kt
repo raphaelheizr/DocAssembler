@@ -2,6 +2,7 @@ package dev.heizer.core.document.renderer
 
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
+import dev.heizer.core.document.renderer.docx.DocxRenderer
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.File
 import java.io.FileOutputStream

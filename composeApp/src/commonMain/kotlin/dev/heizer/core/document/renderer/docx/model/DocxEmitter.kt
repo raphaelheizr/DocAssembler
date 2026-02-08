@@ -1,6 +1,7 @@
-package dev.heizer.core.document.renderer.model
+package dev.heizer.core.document.renderer.docx.model
 
 import org.apache.poi.xwpf.usermodel.XWPFDocument
+import org.apache.poi.xwpf.usermodel.XWPFStyle
 
 class DocxEmitter(private val styleRegistry: StyleRegistry) {
     fun emit(nodes: List<DocNode>): XWPFDocument {
@@ -16,7 +17,7 @@ class DocxEmitter(private val styleRegistry: StyleRegistry) {
     private fun applyStyles(doc: XWPFDocument) {
         val styles = doc.createStyles()
         for (style in styleRegistry.getAllStyles()) {
-            styles.addStyle(org.apache.poi.xwpf.usermodel.XWPFStyle(style))
+            styles.addStyle(XWPFStyle(style))
         }
     }
 
@@ -37,10 +38,12 @@ class DocxEmitter(private val styleRegistry: StyleRegistry) {
                     r.setText(runNode.text, 0)
                 }
             }
+
             is PlaceholderNode -> {
                 // Em teoria, placeholders já deveriam ter sido resolvidos pelo engine.
                 // Se sobrou um aqui, apenas ignoramos ou avisamos.
             }
+
             else -> {}
         }
     }

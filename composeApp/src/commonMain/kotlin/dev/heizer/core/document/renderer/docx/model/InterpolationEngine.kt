@@ -1,4 +1,4 @@
-package dev.heizer.core.document.renderer.model
+package dev.heizer.core.document.renderer.docx.model
 
 class InterpolationEngine {
     fun interpolate(

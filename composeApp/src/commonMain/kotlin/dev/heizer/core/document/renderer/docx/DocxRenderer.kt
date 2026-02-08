@@ -1,8 +1,15 @@
-package dev.heizer.core.document.renderer
+package dev.heizer.core.document.renderer.docx
 
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
-import dev.heizer.core.document.renderer.model.*
+import dev.heizer.core.document.renderer.DocumentRenderer
+import dev.heizer.core.document.renderer.docx.model.DocNode
+import dev.heizer.core.document.renderer.docx.model.DocxEmitter
+import dev.heizer.core.document.renderer.docx.model.FragmentParser
+import dev.heizer.core.document.renderer.docx.model.InterpolationEngine
+import dev.heizer.core.document.renderer.docx.model.ParagraphNode
+import dev.heizer.core.document.renderer.docx.model.PlaceholderNode
+import dev.heizer.core.document.renderer.docx.model.StyleRegistry
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.File
 import java.io.FileInputStream

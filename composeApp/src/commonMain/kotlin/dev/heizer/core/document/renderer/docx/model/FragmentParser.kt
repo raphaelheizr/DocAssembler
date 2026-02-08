@@ -1,7 +1,8 @@
-package dev.heizer.core.document.renderer.model
+package dev.heizer.core.document.renderer.docx.model
 
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.apache.poi.xwpf.usermodel.XWPFParagraph
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
 
 class FragmentParser(private val styleRegistry: StyleRegistry) {
     fun parse(doc: XWPFDocument): List<DocNode> {
@@ -41,7 +42,7 @@ class FragmentParser(private val styleRegistry: StyleRegistry) {
         
         val styleId = p.style?.let { styleRegistry.ensure(it, doc) }
         val runs = mutableListOf<RunNode>()
-        var placeholderRPr: org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr? = null
+        var placeholderRPr: CTRPr? = null
 
         for (r in p.runs) {
             val text = r.text()
