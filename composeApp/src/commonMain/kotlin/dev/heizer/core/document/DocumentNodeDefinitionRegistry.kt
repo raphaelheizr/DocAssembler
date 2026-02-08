@@ -4,22 +4,30 @@ import dev.heizer.core.file.Repository
 import kotlinx.serialization.Serializable
 
 @Serializable
-class DocumentNodeDefinitionRegistry(
+data class DocumentNodeDefinitionRegistry(
     val definitions: List<DocumentNodeDefinition>,
-    val customTemplateEnabled: Boolean = false,
-    val customTemplatePath: String = ""
+    val customBaseTemplateEnabled: Boolean,
+    val customBaseTemplatePath: String
 ) {
     companion object {
-        const val FILE_NAME = "definitions.json"
+        const val DEFINITIONS_PATH = "./configs/definitions.json"
     }
 
     fun save(repository: Repository<DocumentNodeDefinitionRegistry>) {
-        repository.save(FILE_NAME, this)
+        repository.save(DEFINITIONS_PATH, this)
     }
 
     object Factory {
+        fun empty(): DocumentNodeDefinitionRegistry =
+            DocumentNodeDefinitionRegistry(
+                definitions = emptyList(),
+                customBaseTemplatePath = DEFINITIONS_PATH,
+                customBaseTemplateEnabled = false
+            )
+
         fun load(repository: Repository<DocumentNodeDefinitionRegistry>): DocumentNodeDefinitionRegistry {
-            return repository.load(FILE_NAME)
+            return repository.load(DEFINITIONS_PATH)
         }
     }
+
 }

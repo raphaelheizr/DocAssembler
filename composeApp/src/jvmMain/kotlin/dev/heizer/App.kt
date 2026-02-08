@@ -8,15 +8,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.ui.EditorViewModel
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun App() {
     val viewModel = remember { EditorViewModel() }
@@ -89,11 +92,18 @@ fun App() {
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Esquerda: Árvore do Documento
-                    Box(modifier = Modifier.weight(0.4f).fillMaxHeight().background(Color.LightGray.copy(alpha = 0.2f)).padding(8.dp)) {
+                    Box(
+                        modifier = Modifier.weight(0.4f).fillMaxHeight().background(Color.LightGray.copy(alpha = 0.2f))
+                            .padding(8.dp)
+                    ) {
                         Column {
                             Text("Estrutura do Documento", style = MaterialTheme.typography.titleMedium)
                             Spacer(modifier = Modifier.height(8.dp))
-                            TreeView(viewModel.document, viewModel.selectedNodeId, onSelect = { viewModel.selectNode(it) }, onDelete = { viewModel.requestDeleteNode(it) })
+                            TreeView(
+                                viewModel.document,
+                                viewModel.selectedNodeId,
+                                onSelect = { viewModel.selectNode(it) },
+                                onDelete = { viewModel.requestDeleteNode(it) })
                         }
                     }
 
@@ -102,9 +112,10 @@ fun App() {
                         Text("Componentes Disponíveis", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         LazyColumn {
-                            items(viewModel.definitions) { def: DocumentNodeDefinition ->
+                            items(viewModel.registry.definitions) { def: DocumentNodeDefinition ->
                                 Card(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.addComponent(def) }
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        .clickable { viewModel.addComponent(def) }
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(def.name, style = MaterialTheme.typography.titleSmall)
@@ -122,8 +133,9 @@ fun App() {
     }
 }
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
-fun TreeView(document: Document, selectedId: Long?, onSelect: (Long) -> Unit, onDelete: (DocumentNode) -> Unit) {
+fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column {
         Text(
             text = "📄 ${document.metadata.name}",
@@ -135,20 +147,25 @@ fun TreeView(document: Document, selectedId: Long?, onSelect: (Long) -> Unit, on
     }
 }
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
-fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit, onDelete: (DocumentNode) -> Unit) {
+fun NodeView(node: DocumentNode, selectedId: Uuid?, onSelect: (Uuid) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         val isSelected = node.id == selectedId
-        
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp)
                 .clickable { onSelect(node.id) },
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.5f
+                )
             ),
-            elevation = if (isSelected) CardDefaults.cardElevation(defaultElevation = 4.dp) else CardDefaults.cardElevation(defaultElevation = 0.dp)
+            elevation = if (isSelected) CardDefaults.cardElevation(defaultElevation = 4.dp) else CardDefaults.cardElevation(
+                defaultElevation = 0.dp
+            )
         ) {
             Row(
                 modifier = Modifier.padding(8.dp),
@@ -159,7 +176,7 @@ fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit, on
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
-                    text = "ID: ${node.id % 1000} - ${node.templatePath.split("/").last()}",
+                    text = "ID: ${node.id} - ${node.templatePath.split("/").last()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -203,7 +220,7 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = viewModel.customTemplateEnabled,
+                        checked = viewModel.registry.customBaseTemplateEnabled,
                         onCheckedChange = { viewModel.toggleCustomTemplate(it) }
                     )
                     Text("Usar modelo-base personalizado")
@@ -212,13 +229,13 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = { viewModel.pickCustomTemplateFile() },
-                        enabled = viewModel.customTemplateEnabled
+                        enabled = viewModel.registry.customBaseTemplateEnabled
                     ) {
                         Text("Selecionar Arquivo .docx")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = viewModel.customTemplatePath.ifBlank { "Nenhum arquivo selecionado" },
+                        text = viewModel.registry.customBaseTemplatePath.ifBlank { "Nenhum arquivo selecionado" },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f)
                     )

@@ -3,6 +3,8 @@ package dev.heizer.core.document
 import dev.heizer.core.document.renderer.DocumentRenderer
 import dev.heizer.core.file.Repository
 import kotlinx.serialization.Serializable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 data class Document(
@@ -22,7 +24,8 @@ data class Document(
         renderer.render(this, OUTPUT_FILE_PATH, baseTemplatePath)
     }
 
-    fun addNode(targetId: Long?, newNode: DocumentNode): Document {
+    @OptIn(ExperimentalUuidApi::class)
+    fun addNode(targetId: Uuid?, newNode: DocumentNode): Document {
         if (targetId == null) {
             return this.copy(nodes = nodes + newNode)
         }
@@ -30,12 +33,14 @@ data class Document(
         return this.copy(nodes = newNodes)
     }
 
-    fun removeNode(nodeId: Long): Document {
+    @OptIn(ExperimentalUuidApi::class)
+    fun removeNode(nodeId: Uuid): Document {
         val newNodes = removeNodeFromList(nodes, nodeId)
         return this.copy(nodes = newNodes)
     }
 
-    private fun removeNodeFromList(nodes: List<DocumentNode>, nodeId: Long): List<DocumentNode> {
+    @OptIn(ExperimentalUuidApi::class)
+    private fun removeNodeFromList(nodes: List<DocumentNode>, nodeId: Uuid): List<DocumentNode> {
         return nodes.filter { it.id != nodeId }
             .map { node ->
                 if (node.children.isNotEmpty()) {
@@ -46,7 +51,8 @@ data class Document(
             }
     }
 
-    private fun addChildToNode(nodes: List<DocumentNode>, targetId: Long, newNode: DocumentNode): List<DocumentNode> {
+    @OptIn(ExperimentalUuidApi::class)
+    private fun addChildToNode(nodes: List<DocumentNode>, targetId: Uuid, newNode: DocumentNode): List<DocumentNode> {
         return nodes.map { node ->
             if (node.id == targetId) {
                 node.copy(children = node.children + newNode)
@@ -59,7 +65,8 @@ data class Document(
     }
 
     fun validateTemplates(): List<String> {
-        val missingTemplates = mutableListOf<String>()
+        val missingTemplates = mutableSetOf<String>()
+
         fun checkNodes(nodes: List<DocumentNode>) {
             nodes.forEach { node ->
                 val file = java.io.File(node.templatePath)
@@ -69,8 +76,9 @@ data class Document(
                 checkNodes(node.children)
             }
         }
+
         checkNodes(this.nodes)
-        return missingTemplates
+        return missingTemplates.toList()
     }
 
     companion object {
