@@ -7,7 +7,7 @@ import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNodeDefinition
 
 class EditorViewModel {
-    var document by mutableStateOf(Document.create("Novo Documento", "documento.json"))
+    var document by mutableStateOf(Document.create("Novo Documento"))
     
     var definitions by mutableStateOf(
         listOf(

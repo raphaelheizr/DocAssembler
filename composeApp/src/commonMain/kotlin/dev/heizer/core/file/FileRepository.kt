@@ -1,9 +1,9 @@
-package dev.heizer.core.document
+package dev.heizer.core.file
 
 import dev.heizer.core.serializer.Serializer
 import java.io.File
 
-class DocumentRepository<T>(private val serializer: Serializer<Document, String>) : Repository<Document> {
+class FileRepository<T>(private val serializer: Serializer<T, String>) : Repository<T> {
 
     override fun load(filePath: String) =
         File(filePath)
@@ -16,11 +16,11 @@ class DocumentRepository<T>(private val serializer: Serializer<Document, String>
                 serializer.deserialize(read)
             }
 
-    override fun save(filePath: String, document: Document) =
+    override fun save(filePath: String, content: T) =
         File(filePath)
             .let {
                 require(it.canWrite()) { "File cannot be written: $filePath" }
-                it.writeText(serializer.serialize(document))
+                it.writeText(serializer.serialize(content))
             }
 
 }
