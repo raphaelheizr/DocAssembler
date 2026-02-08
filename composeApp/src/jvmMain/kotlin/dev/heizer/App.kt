@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import dev.heizer.core.btree.BTree
+import androidx.compose.ui.Alignment
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
@@ -28,8 +28,26 @@ fun App() {
                 TopAppBar(
                     title = {
                         Text("DocAssembler")
+                    },
+                    actions = {
+                        Button(onClick = { viewModel.generateDocument() }) {
+                            Text("Gerar Documento")
+                        }
                     }
                 )
+
+                if (viewModel.errorMessage != null) {
+                    AlertDialog(
+                        onDismissRequest = { viewModel.errorMessage = null },
+                        confirmButton = {
+                            TextButton(onClick = { viewModel.errorMessage = null }) {
+                                Text("OK")
+                            }
+                        },
+                        title = { Text("Erro") },
+                        text = { Text(viewModel.errorMessage!!) }
+                    )
+                }
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Esquerda: Árvore do Documento
@@ -48,7 +66,7 @@ fun App() {
                         LazyColumn {
                             items(viewModel.definitions) { def: DocumentNodeDefinition ->
                                 Card(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { /* TODO: Adicionar ao documento */ }
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.addComponent(def) }
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(def.name, style = MaterialTheme.typography.titleSmall)
@@ -73,29 +91,46 @@ fun TreeView(document: Document, selectedId: Long?, onSelect: (Long) -> Unit) {
             text = "📄 ${document.metadata.name}",
             modifier = Modifier.padding(vertical = 4.dp)
         )
-        document.nodes.root?.let {
-            BTreeView(it, selectedId, onSelect)
+        document.nodes.forEach { node ->
+            NodeView(node, selectedId, onSelect)
         }
     }
 }
 
 @Composable
-fun BTreeView(node: BTree.Node<DocumentNode>, selectedId: Long?, onSelect: (Long) -> Unit) {
+fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit) {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         val isSelected = node.id == selectedId
         
-        Text(
-            text = "ID: ${node.id} - ${node.value.relativePath}",
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onSelect(node.id) }
-                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                .padding(4.dp),
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else Color.Unspecified
-        )
+                .padding(vertical = 2.dp)
+                .clickable { onSelect(node.id) },
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            elevation = if (isSelected) CardDefaults.cardElevation(defaultElevation = 4.dp) else CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "📄",
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = "ID: ${node.id % 1000} - ${node.templatePath.split("/").last()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
-        node.left?.let { BTreeView(it, selectedId, onSelect) }
-        node.right?.let { BTreeView(it, selectedId, onSelect) }
+        node.children.forEach { child ->
+            NodeView(child, selectedId, onSelect)
+        }
     }
 }
 
