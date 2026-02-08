@@ -158,4 +158,80 @@ class DocxRendererTest {
             assertTrue(texts.any { it.trim() == "Pai:" }, "Deve conter 'Pai:' sem o placeholder. Texto atual: ${texts}")
         }
     }
+
+    @Test
+    fun testPreserveParagraphStyleId() {
+        val templateDir = File("build/test-templates")
+        templateDir.mkdirs()
+
+        val styleTemplate = File(templateDir, "style_test.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.style = "Heading1"
+            p.createRun().setText("Texto com Estilo")
+            FileOutputStream(styleTemplate).use { doc.write(it) }
+        }
+
+        val document = Document(
+            Document.Metadata("Teste Estilo", "none"),
+            listOf(DocumentNode(1, styleTemplate.path))
+        )
+
+        val renderer = DocxRenderer()
+        val out = "build/test-output/style_result.docx"
+        renderer.render(document, out)
+
+        XWPFDocument(File(out).inputStream()).use { doc ->
+            val p = doc.paragraphs.find { it.text == "Texto com Estilo" }
+            assertTrue(p != null, "Deve conter o parágrafo")
+            // Nota: O Apache POI pode retornar null se o estilo não existir no arquivo de saída,
+            // mas o ID do estilo deve estar presente no XML.
+            // Para este teste, verificamos se o estilo foi copiado.
+            assertTrue(p!!.style == "Heading1", "O ID do estilo 'Heading1' deve ser preservado. Atual: ${p.style}")
+        }
+    }
+
+    @Test
+    fun testNestedStylesPreservation() {
+        val templateDir = File("build/test-templates")
+        templateDir.mkdirs()
+
+        // Template pai com estilo "Title" e placeholder
+        val parentTemplate = File(templateDir, "parent_title.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.style = "Title"
+            p.createRun().setText("Pai: {%}")
+            FileOutputStream(parentTemplate).use { doc.write(it) }
+        }
+
+        // Template filho com estilo "Subtitle"
+        val childTemplate = File(templateDir, "child_subtitle.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.style = "Subtitle"
+            p.createRun().setText("Filho Subtitle")
+            FileOutputStream(childTemplate).use { doc.write(it) }
+        }
+
+        val document = Document(
+            Document.Metadata("Nested Style", "none"),
+            listOf(DocumentNode(1, parentTemplate.path, listOf(DocumentNode(2, childTemplate.path))))
+        )
+
+        val renderer = DocxRenderer()
+        val out = "build/test-output/nested_style_result.docx"
+        renderer.render(document, out)
+
+        XWPFDocument(File(out).inputStream()).use { doc ->
+            val pParent = doc.paragraphs.find { it.text.contains("Pai:") }
+            val pChild = doc.paragraphs.find { it.text.contains("Filho Subtitle") }
+            
+            assertTrue(pParent != null, "Deve conter o parágrafo pai")
+            assertTrue(pChild != null, "Deve conter o parágrafo filho")
+            
+            assertTrue(pParent!!.style == "Title", "Estilo do pai deve ser Title. Atual: ${pParent.style}")
+            assertTrue(pChild!!.style == "Subtitle", "Estilo do filho deve ser Subtitle. Atual: ${pChild.style}")
+        }
+    }
 }

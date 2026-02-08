@@ -49,6 +49,19 @@ fun App() {
                     )
                 }
 
+                if (viewModel.successMessage != null) {
+                    AlertDialog(
+                        onDismissRequest = { viewModel.successMessage = null },
+                        confirmButton = {
+                            TextButton(onClick = { viewModel.successMessage = null }) {
+                                Text("OK")
+                            }
+                        },
+                        title = { Text("Sucesso") },
+                        text = { Text(viewModel.successMessage!!) }
+                    )
+                }
+
                 if (viewModel.pendingDeleteNode != null) {
                     AlertDialog(
                         onDismissRequest = { viewModel.cancelDelete() },

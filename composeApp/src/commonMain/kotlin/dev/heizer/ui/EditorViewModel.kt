@@ -17,6 +17,7 @@ class EditorViewModel {
     var definitions by mutableStateOf<List<DocumentNodeDefinition>>(emptyList())
 
     var errorMessage by mutableStateOf<String?>(null)
+    var successMessage by mutableStateOf<String?>(null)
 
     init {
         try {
@@ -65,6 +66,7 @@ class EditorViewModel {
 
     fun generateDocument() {
         errorMessage = null
+        successMessage = null
         val missingTemplates = document.validateTemplates()
 
         if (missingTemplates.isNotEmpty()) {
@@ -74,6 +76,7 @@ class EditorViewModel {
 
         try {
             document.render(DocxRenderer())
+            successMessage = "Documento gerado com sucesso!"
         } catch (e: Exception) {
             errorMessage = "Erro ao gerar documento: ${e.message}"
         }
