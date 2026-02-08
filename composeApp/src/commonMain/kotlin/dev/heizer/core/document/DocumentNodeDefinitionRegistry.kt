@@ -10,24 +10,23 @@ data class DocumentNodeDefinitionRegistry(
     val customBaseTemplatePath: String
 ) {
     companion object {
-        const val DEFINITIONS_PATH = "./configs/definitions.json"
+        const val DEFAULT_BASE_TEMPLATE_PATH = "./configs/templates/base-template.docx"
+        const val DEFINITIONS_PATH = "./configs/definitions"
     }
 
-    fun save(repository: Repository<DocumentNodeDefinitionRegistry>) {
+    fun save(repository: Repository<DocumentNodeDefinitionRegistry>) =
         repository.save(DEFINITIONS_PATH, this)
-    }
 
     object Factory {
         fun empty(): DocumentNodeDefinitionRegistry =
             DocumentNodeDefinitionRegistry(
                 definitions = emptyList(),
-                customBaseTemplatePath = DEFINITIONS_PATH,
+                customBaseTemplatePath = DEFAULT_BASE_TEMPLATE_PATH,
                 customBaseTemplateEnabled = false
             )
 
-        fun load(repository: Repository<DocumentNodeDefinitionRegistry>): DocumentNodeDefinitionRegistry {
-            return repository.load(DEFINITIONS_PATH)
-        }
+        fun load(repository: Repository<DocumentNodeDefinitionRegistry>): DocumentNodeDefinitionRegistry =
+            repository.load(DEFINITIONS_PATH)
     }
 
 }

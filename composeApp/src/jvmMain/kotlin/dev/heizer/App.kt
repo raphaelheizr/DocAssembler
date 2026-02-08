@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +15,7 @@ import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.ui.EditorViewModel
+import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -34,7 +34,7 @@ fun App() {
                     },
                     actions = {
                         IconButton(onClick = { viewModel.isSettingsOpen = true }) {
-                            Text("⚙️")
+                            Text("⚙")
                         }
                         Button(onClick = { viewModel.generateDocument() }) {
                             Text("Gerar Documento")
@@ -206,6 +206,8 @@ fun TopAppBar(title: @Composable () -> Unit, actions: @Composable RowScope.() ->
 
 @Composable
 fun SettingsScreen(viewModel: EditorViewModel) {
+    var showEditDialog by remember { mutableStateOf<DocumentNodeDefinition?>(null) }
+
     AlertDialog(
         onDismissRequest = { viewModel.isSettingsOpen = false },
         confirmButton = {
@@ -216,7 +218,7 @@ fun SettingsScreen(viewModel: EditorViewModel) {
         title = { Text("Configurações") },
         text = {
             Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                Text("Templates", style = MaterialTheme.typography.titleMedium)
+                Text("Modelo Base", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
@@ -240,6 +242,112 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Templates de Componentes", style = MaterialTheme.typography.titleMedium)
+                    IconButton(onClick = {
+                        showEditDialog = DocumentNodeDefinition(
+                            id = UUID.randomUUID().toString(),
+                            name = "",
+                            description = "",
+                            templateDocPath = ""
+                        )
+                    }) {
+                        Text("+")
+                    }
+                }
+
+                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    items(viewModel.registry.definitions) { definition ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(definition.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(definition.description, style = MaterialTheme.typography.bodySmall)
+                            }
+                            IconButton(onClick = { showEditDialog = definition }) {
+                                Text("✎")
+                            }
+                            IconButton(onClick = { viewModel.deleteDefinition(definition.id) }) {
+                                Text("🗑", style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.error))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    showEditDialog?.let { definition ->
+        DefinitionEditDialog(
+            definition = definition,
+            onDismiss = { showEditDialog = null },
+            onConfirm = { updated ->
+                viewModel.addOrUpdateDefinition(updated)
+                showEditDialog = null
+            },
+            onPickFile = { viewModel.pickDefinitionFile(it) }
+        )
+    }
+}
+
+@Composable
+fun DefinitionEditDialog(
+    definition: DocumentNodeDefinition,
+    onDismiss: () -> Unit,
+    onConfirm: (DocumentNodeDefinition) -> Unit,
+    onPickFile: ((String) -> Unit) -> Unit
+) {
+    var name by remember { mutableStateOf(definition.name) }
+    var description by remember { mutableStateOf(definition.description) }
+    var path by remember { mutableStateOf(definition.templateDocPath) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (definition.name.isEmpty()) "Novo Componente" else "Editar Componente") },
+        text = {
+            Column {
+                TextField(value = name, onValueChange = { name = it }, label = { Text("Nome") })
+                TextField(value = description, onValueChange = { description = it }, label = { Text("Descrição") })
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = { onPickFile { path = it } }) {
+                        Text("Selecionar Arquivo")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        path.split("/").last().ifBlank { "Nenhum arquivo" },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        definition.copy(
+                            name = name,
+                            description = description,
+                            templateDocPath = path
+                        )
+                    )
+                },
+                enabled = name.isNotBlank() && path.isNotBlank()
+            ) {
+                Text("Salvar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
             }
         }
     )

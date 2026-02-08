@@ -3,10 +3,10 @@ package dev.heizer.core.file
 import dev.heizer.core.serializer.Serializer
 import java.io.File
 
-class FileRepository<T>(private val serializer: Serializer<T, String>) : Repository<T> {
+class FileRepository<T>(private val serializer: Serializer<T, String>, private val fileExtension: String? = null) : Repository<T> {
 
     override fun load(filePath: String) =
-        File(filePath)
+        File("$filePath${getFileExtension()}")
             .let {
                 require(it.exists()) { "File does not exist: $filePath" }
                 require(it.isFile) { "File is not a file: $filePath" }
@@ -17,10 +17,12 @@ class FileRepository<T>(private val serializer: Serializer<T, String>) : Reposit
             }
 
     override fun save(filePath: String, content: T) =
-        File(filePath)
+        File("$filePath${getFileExtension()}")
             .let {
                 it.parentFile?.mkdirs()
                 it.writeText(serializer.serialize(content))
             }
 
+    private fun getFileExtension() =
+        if (fileExtension != null) ".$fileExtension" else ""
 }

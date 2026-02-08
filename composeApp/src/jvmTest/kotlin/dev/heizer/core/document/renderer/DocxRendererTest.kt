@@ -9,7 +9,10 @@ import java.io.FileOutputStream
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class DocxRendererTest {
 
     @Test
@@ -48,9 +51,9 @@ class DocxRendererTest {
         }
 
         // Montar estrutura do Document
-        val itemNode = DocumentNode(3, itemTemplate.path)
-        val contentNode = DocumentNode(2, contentTemplate.path, listOf(itemNode))
-        val rootNode = DocumentNode(1, titleTemplate.path)
+        val itemNode = DocumentNode(itemTemplate.path)
+        val contentNode = DocumentNode(Uuid.random(), contentTemplate.path, listOf(itemNode))
+        val rootNode = DocumentNode(titleTemplate.path)
         
         val document = Document(
             Document.Metadata("Teste", "none"),
@@ -87,8 +90,8 @@ class DocxRendererTest {
             FileOutputStream(noPlaceholderTemplate).use { doc.write(it) }
         }
 
-        val childNode = DocumentNode(2, "irrelevant")
-        val rootNode = DocumentNode(1, noPlaceholderTemplate.path, listOf(childNode))
+        val childNode = DocumentNode("irrelevant")
+        val rootNode = DocumentNode(Uuid.random(), noPlaceholderTemplate.path, listOf(childNode))
         
         val document = Document(
             Document.Metadata("Erro", "none"),
@@ -128,7 +131,7 @@ class DocxRendererTest {
         // Cenário 1: Com filho
         val docWithChild = Document(
             Document.Metadata("Com Filho", "none"),
-            listOf(DocumentNode(1, parentTemplate.path, listOf(DocumentNode(2, childTemplate.path))))
+            listOf(DocumentNode(Uuid.random(), parentTemplate.path, listOf(DocumentNode(childTemplate.path))))
         )
 
         val renderer = DocxRenderer()
@@ -145,7 +148,7 @@ class DocxRendererTest {
         // Cenário 2: Sem filho (placeholder deve sumir)
         val docWithoutChild = Document(
             Document.Metadata("Sem Filho", "none"),
-            listOf(DocumentNode(1, parentTemplate.path, emptyList()))
+            listOf(DocumentNode(parentTemplate.path))
         )
         val out2 = "build/test-output/styles_no_child.docx"
         renderer.render(docWithoutChild, out2)
@@ -175,7 +178,7 @@ class DocxRendererTest {
 
         val document = Document(
             Document.Metadata("Teste Estilo", "none"),
-            listOf(DocumentNode(1, styleTemplate.path))
+            listOf(DocumentNode(styleTemplate.path))
         )
 
         val renderer = DocxRenderer()
@@ -217,7 +220,7 @@ class DocxRendererTest {
 
         val document = Document(
             Document.Metadata("Nested Style", "none"),
-            listOf(DocumentNode(1, parentTemplate.path, listOf(DocumentNode(2, childTemplate.path))))
+            listOf(DocumentNode(Uuid.random(), parentTemplate.path, listOf(DocumentNode(childTemplate.path))))
         )
 
         val renderer = DocxRenderer()
@@ -256,7 +259,7 @@ class DocxRendererTest {
 
         val document = Document(
             Document.Metadata("Teste Base", "none"),
-            listOf(DocumentNode(1, nodeTemplate.path))
+            listOf(DocumentNode(nodeTemplate.path))
         )
 
         val renderer = DocxRenderer()

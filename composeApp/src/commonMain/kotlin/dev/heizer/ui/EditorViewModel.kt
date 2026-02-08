@@ -16,9 +16,13 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class EditorViewModel {
-    private val repository = FileRepository(JsonSerializer.create<DocumentNodeDefinitionRegistry>())
+    private val repository: FileRepository<DocumentNodeDefinitionRegistry> =
+        FileRepository(
+            serializer = JsonSerializer.create<DocumentNodeDefinitionRegistry>(),
+            fileExtension = "json"
+        )
 
-    var registry: DocumentNodeDefinitionRegistry =
+    var registry: DocumentNodeDefinitionRegistry by mutableStateOf(
         runCatching {
             DocumentNodeDefinitionRegistry.Factory.load(repository)
         }.getOrElse { ex ->
@@ -28,6 +32,7 @@ class EditorViewModel {
                     it.save(repository)
                 }
         }
+    )
 
     var document by mutableStateOf(Document.create("Novo Documento"))
 
@@ -73,6 +78,31 @@ class EditorViewModel {
             .also {
                 saveSettings()
             }
+
+    fun addOrUpdateDefinition(definition: DocumentNodeDefinition) {
+        val newDefinitions = if (registry.definitions.any { it.id == definition.id }) {
+            registry.definitions.map { if (it.id == definition.id) definition else it }
+        } else {
+            registry.definitions + definition
+        }
+        registry = registry.copy(definitions = newDefinitions)
+        saveSettings()
+    }
+
+    fun deleteDefinition(definitionId: String) {
+        registry = registry.copy(definitions = registry.definitions.filter { it.id != definitionId })
+        saveSettings()
+    }
+
+    fun pickDefinitionFile(onFilePicked: (String) -> Unit) {
+        val chooser = JFileChooser()
+        val filter = FileNameExtensionFilter("Documentos Word (.docx)", "docx")
+        chooser.fileFilter = filter
+        val result = chooser.showOpenDialog(null)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            onFilePicked(chooser.selectedFile.absolutePath)
+        }
+    }
 
     fun saveSettings() = registry.save(repository)
 

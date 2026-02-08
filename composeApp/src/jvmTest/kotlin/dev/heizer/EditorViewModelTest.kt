@@ -3,7 +3,9 @@ package dev.heizer
 import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.ui.EditorViewModel
 import kotlin.test.*
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 class EditorViewModelTest {
 
     @Test
@@ -97,7 +99,7 @@ class EditorViewModelTest {
         // Simular recarregamento
         val vm2 = EditorViewModel()
         
-        assertTrue(vm2.customTemplateEnabled, "Enabled state should be persisted")
-        assertEquals(testPath, vm2.customTemplatePath, "Path should be persisted")
+        assertTrue(vm2.registry.customBaseTemplateEnabled, "Enabled state should be persisted")
+        assertEquals(testPath, vm2.registry.customBaseTemplatePath, "Path should be persisted")
     }
 }
