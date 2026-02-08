@@ -13,11 +13,6 @@ class DocxRenderer : DocumentRenderer {
 
     override fun render(document: Document, path: String) {
         val resultDocument = XWPFDocument()
-        
-        // Remove o parágrafo vazio inicial que o XWPFDocument cria por padrão
-        if (resultDocument.paragraphs.isNotEmpty()) {
-            resultDocument.removeBodyElement(0)
-        }
 
         document.nodes.forEach { node ->
             renderNodeTo(node, resultDocument)
@@ -25,120 +20,130 @@ class DocxRenderer : DocumentRenderer {
 
         val file = File(path)
         file.parentFile?.mkdirs()
-        
-        FileOutputStream(file).use { out ->
-            resultDocument.write(out)
-        }
+
+        FileOutputStream(file)
+            .use { out ->
+                resultDocument.write(out)
+            }
+
         resultDocument.close()
     }
 
     private fun renderNodeTo(node: DocumentNode, targetDoc: XWPFDocument) {
-        val templateFile = File(node.templatePath)
-        if (!templateFile.exists()) {
-            throw IllegalArgumentException("Template não encontrado: ${node.templatePath}")
+        val templateDoc = loadTemplate(node.templatePath)
+        templateDoc.use { doc ->
+            if (node.children.isEmpty()) {
+                appendDocument(targetDoc, doc)
+            } else {
+                renderWithInterpolation(node, doc, targetDoc)
+            }
+        }
+    }
+
+    private fun loadTemplate(path: String): XWPFDocument {
+        val templateFile = File(path)
+        require(!templateFile.exists()) { "Template não encontrado: $path" }
+        return FileInputStream(templateFile).use { XWPFDocument(it) }
+    }
+
+    private fun renderWithInterpolation(
+        node: DocumentNode,
+        templateDoc: XWPFDocument,
+        targetDoc: XWPFDocument
+    ) {
+        val placeholderParagraph = findPlaceholderParagraph(templateDoc)
+            ?: throw IllegalStateException("Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}")
+
+        val elementPos = templateDoc.getPosOfParagraph(placeholderParagraph)
+        val bodyElements = templateDoc.bodyElements
+
+        // Copiar parágrafos ANTES do placeholder
+        copyParagraphsInRange(templateDoc, targetDoc, 0 until elementPos)
+
+        // Tratar o parágrafo do placeholder
+        processPlaceholder(node, placeholderParagraph, targetDoc)
+
+        // Copiar parágrafos DEPOIS do placeholder
+        copyParagraphsInRange(templateDoc, targetDoc, (elementPos + 1) until bodyElements.size)
+    }
+
+    private fun findPlaceholderParagraph(doc: XWPFDocument): XWPFParagraph? {
+        return doc.paragraphs.find { it.text.contains("{%}") }
+    }
+
+    private fun copyParagraphsInRange(source: XWPFDocument, target: XWPFDocument, range: IntRange) {
+        val bodyElements = source.bodyElements
+        for (i in range) {
+            val element = bodyElements.getOrNull(i)
+            if (element is XWPFParagraph) {
+                copyParagraph(element, target.createParagraph())
+            }
+        }
+    }
+
+    private fun processPlaceholder(
+        node: DocumentNode,
+        placeholderParagraph: XWPFParagraph,
+        targetDoc: XWPFDocument
+    ) {
+        val pText = placeholderParagraph.text
+        if (pText.trim() == "{%}") {
+            node.children.forEach { renderNodeTo(it, targetDoc) }
+        } else {
+            renderInlinePlaceholder(node, placeholderParagraph, targetDoc)
+        }
+    }
+
+    private fun renderInlinePlaceholder(
+        node: DocumentNode,
+        placeholderParagraph: XWPFParagraph,
+        targetDoc: XWPFDocument
+    ) {
+        val newP = targetDoc.createParagraph()
+        newP.ctp.pPr = placeholderParagraph.ctp.pPr
+
+        var foundInRun = false
+        for (run in placeholderParagraph.runs) {
+            val runText = run.getText(0) ?: ""
+            if (!foundInRun && runText.contains("{%}")) {
+                foundInRun = true
+                processRunLeavingPlaceholder(node, run, newP, targetDoc, placeholderParagraph)
+            } else if (foundInRun) {
+                val lastP = targetDoc.paragraphs.last()
+                copyRun(run, lastP.createRun())
+            } else {
+                copyRun(run, newP.createRun())
+            }
+        }
+    }
+
+    private fun processRunLeavingPlaceholder(
+        node: DocumentNode,
+        run: XWPFRun,
+        currentP: XWPFParagraph,
+        targetDoc: XWPFDocument,
+        placeholderParagraph: XWPFParagraph
+    ) {
+        val runText = run.getText(0) ?: ""
+        val parts = runText.split("{%}", limit = 2)
+
+        // Parte antes do placeholder no mesmo run
+        if (parts[0].isNotEmpty()) {
+            val rBefore = currentP.createRun()
+            copyRunStyles(run, rBefore)
+            rBefore.setText(parts[0], 0)
         }
 
-        FileInputStream(templateFile).use { fis ->
-            val templateDoc = XWPFDocument(fis)
-            
-            if (node.children.isEmpty()) {
-                appendDocument(targetDoc, templateDoc)
-            } else {
-                // Se houver children, precisamos interpolar
-                var placeholderFound = false
-                
-                // Procurar pelo placeholder {%}
-                val bodyElements = templateDoc.bodyElements
-                for (element in bodyElements) {
-                    if (element is XWPFParagraph) {
-                        val text = element.text
-                        if (text.contains("{%}")) {
-                            placeholderFound = true
-                            
-                            // Copiar parágrafos ANTES do placeholder
-                            val elementPos = templateDoc.getPosOfParagraph(element)
-                            for (i in 0 until elementPos) {
-                                val prevElement = templateDoc.bodyElements[i]
-                                if (prevElement is XWPFParagraph) {
-                                    copyParagraph(prevElement, targetDoc.createParagraph())
-                                }
-                            }
+        // Interpolar filhos
+        node.children.forEach { renderNodeTo(it, targetDoc) }
 
-                            // Tratar o parágrafo do placeholder
-                            val placeholderParagraph = element
-                            val pText = placeholderParagraph.text
-                            
-                            if (pText.trim() == "{%}") {
-                                // Se for apenas o placeholder, renderiza os filhos no lugar
-                                node.children.forEach { child ->
-                                    renderNodeTo(child, targetDoc)
-                                }
-                            } else {
-                                // Se houver texto antes/depois no mesmo parágrafo
-                                val newP = targetDoc.createParagraph()
-                                newP.ctp.pPr = placeholderParagraph.ctp.pPr
-                                
-                                // Copiar runs até o {%}
-                                var foundInRun = false
-                                for (run in placeholderParagraph.runs) {
-                                    val runText = run.getText(0) ?: ""
-                                    if (!foundInRun && runText.contains("{%}")) {
-                                        foundInRun = true
-                                        val parts = runText.split("{%}", limit = 2)
-                                        
-                                        // Parte antes
-                                        if (parts[0].isNotEmpty()) {
-                                            val rBefore = newP.createRun()
-                                            copyRunStyles(run, rBefore)
-                                            rBefore.setText(parts[0], 0)
-                                        }
-                                        
-                                        // Interpolar filhos aqui
-                                        node.children.forEach { child ->
-                                            renderNodeTo(child, targetDoc)
-                                        }
-
-                                        // Parte depois
-                                        if (parts[1].isNotEmpty()) {
-                                            val rAfterP = targetDoc.createParagraph()
-                                            rAfterP.ctp.pPr = placeholderParagraph.ctp.pPr
-                                            val rAfter = rAfterP.createRun()
-                                            copyRunStyles(run, rAfter)
-                                            rAfter.setText(parts[1], 0)
-                                        }
-                                    } else if (foundInRun) {
-                                        // Texto após o run que continha o placeholder
-                                        val lastP = targetDoc.paragraphs.last()
-                                        val rNext = lastP.createRun()
-                                        copyRunStyles(run, rNext)
-                                        rNext.setText(runText, 0)
-                                    } else {
-                                        // Texto antes do run que contém o placeholder
-                                        val rPrev = newP.createRun()
-                                        copyRunStyles(run, rPrev)
-                                        rPrev.setText(runText, 0)
-                                    }
-                                }
-                            }
-
-                            // Copiar parágrafos DEPOIS do placeholder
-                            for (i in (elementPos + 1) until bodyElements.size) {
-                                val nextElement = bodyElements[i]
-                                if (nextElement is XWPFParagraph) {
-                                    copyParagraph(nextElement, targetDoc.createParagraph())
-                                }
-                            }
-                            
-                            break
-                        }
-                    }
-                }
-
-                if (!placeholderFound) {
-                    throw IllegalStateException("Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}")
-                }
-            }
-            templateDoc.close()
+        // Parte depois do placeholder no mesmo run
+        if (parts[1].isNotEmpty()) {
+            val rAfterP = targetDoc.createParagraph()
+            rAfterP.ctp.pPr = placeholderParagraph.ctp.pPr
+            val rAfter = rAfterP.createRun()
+            copyRunStyles(run, rAfter)
+            rAfter.setText(parts[1], 0)
         }
     }
 
@@ -164,7 +169,7 @@ class DocxRenderer : DocumentRenderer {
         copyRunStyles(source, target)
         target.setText(source.getText(0))
     }
-    
+
     private fun copyRunStyles(source: XWPFRun, target: XWPFRun) {
         target.ctr.rPr = source.ctr.rPr
     }
