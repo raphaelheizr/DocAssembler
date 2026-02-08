@@ -1,0 +1,10 @@
+{
+    "components": [
+        {
+            "id": "c1",
+            "name": "Cabeçalho",
+            "description": "Cabeçalho padrão",
+            "docPath": "templates/header.docx"
+        }
+    ]
+}
