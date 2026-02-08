@@ -18,8 +18,8 @@ data class Document(
     fun save(repository: Repository<Document>) =
         save(repository, OUTPUT_FILE_PATH, this)
 
-    fun render(renderer: DocumentRenderer) {
-        renderer.render(this, OUTPUT_FILE_PATH)
+    fun render(renderer: DocumentRenderer, baseTemplatePath: String? = null) {
+        renderer.render(this, OUTPUT_FILE_PATH, baseTemplatePath)
     }
 
     fun addNode(targetId: Long?, newNode: DocumentNode): Document {

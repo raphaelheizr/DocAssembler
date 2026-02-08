@@ -5,7 +5,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class DocumentNodeDefinitionRegistry(
-    val definitions: List<DocumentNodeDefinition>
+    val definitions: List<DocumentNodeDefinition>,
+    val customTemplateEnabled: Boolean = false,
+    val customTemplatePath: String = ""
 ) {
     companion object {
         const val FILE_NAME = "definitions.json"

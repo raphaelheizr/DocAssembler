@@ -85,4 +85,19 @@ class EditorViewModelTest {
         assertTrue(vm.document.nodes.isEmpty(), "Node and children should be removed after confirmation")
         assertNull(vm.pendingDeleteNode, "Pending delete should be cleared")
     }
+
+    @Test
+    fun testSettingsPersistence() {
+        val vm = EditorViewModel()
+        val testPath = "/tmp/test.docx"
+        
+        vm.toggleCustomTemplate(true)
+        vm.pickCustomTemplateFileInternal(testPath)
+        
+        // Simular recarregamento
+        val vm2 = EditorViewModel()
+        
+        assertTrue(vm2.customTemplateEnabled, "Enabled state should be persisted")
+        assertEquals(testPath, vm2.customTemplatePath, "Path should be persisted")
+    }
 }

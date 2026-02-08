@@ -17,7 +17,7 @@ import java.io.FileOutputStream
 
 class DocxRenderer : DocumentRenderer {
 
-    override fun render(document: Document, path: String) {
+    override fun render(document: Document, path: String, baseTemplatePath: String?) {
         val styleRegistry = StyleRegistry()
         val parser = FragmentParser(styleRegistry)
         val engine = InterpolationEngine()
@@ -27,7 +27,7 @@ class DocxRenderer : DocumentRenderer {
             renderNodeToAST(node, parser, engine)
         }
 
-        val resultDocument = emitter.emit(rootNodes)
+        val resultDocument = emitter.emit(rootNodes, baseTemplatePath)
 
         val file = File(path)
         file.parentFile?.mkdirs()

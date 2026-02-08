@@ -19,7 +19,7 @@ class FileRepository<T>(private val serializer: Serializer<T, String>) : Reposit
     override fun save(filePath: String, content: T) =
         File(filePath)
             .let {
-                require(it.canWrite()) { "File cannot be written: $filePath" }
+                it.parentFile?.mkdirs()
                 it.writeText(serializer.serialize(content))
             }
 

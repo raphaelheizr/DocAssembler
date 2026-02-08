@@ -30,11 +30,18 @@ fun App() {
                         Text("DocAssembler")
                     },
                     actions = {
+                        IconButton(onClick = { viewModel.isSettingsOpen = true }) {
+                            Text("⚙️")
+                        }
                         Button(onClick = { viewModel.generateDocument() }) {
                             Text("Gerar Documento")
                         }
                     }
                 )
+
+                if (viewModel.isSettingsOpen) {
+                    SettingsScreen(viewModel)
+                }
 
                 if (viewModel.errorMessage != null) {
                     AlertDialog(
@@ -178,4 +185,45 @@ fun NodeView(node: DocumentNode, selectedId: Long?, onSelect: (Long) -> Unit, on
 @Composable
 fun TopAppBar(title: @Composable () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
     CenterAlignedTopAppBar(title = title, actions = actions)
+}
+
+@Composable
+fun SettingsScreen(viewModel: EditorViewModel) {
+    AlertDialog(
+        onDismissRequest = { viewModel.isSettingsOpen = false },
+        confirmButton = {
+            TextButton(onClick = { viewModel.isSettingsOpen = false }) {
+                Text("Fechar")
+            }
+        },
+        title = { Text("Configurações") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                Text("Templates", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = viewModel.customTemplateEnabled,
+                        onCheckedChange = { viewModel.toggleCustomTemplate(it) }
+                    )
+                    Text("Usar modelo-base personalizado")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = { viewModel.pickCustomTemplateFile() },
+                        enabled = viewModel.customTemplateEnabled
+                    ) {
+                        Text("Selecionar Arquivo .docx")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = viewModel.customTemplatePath.ifBlank { "Nenhum arquivo selecionado" },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    )
 }

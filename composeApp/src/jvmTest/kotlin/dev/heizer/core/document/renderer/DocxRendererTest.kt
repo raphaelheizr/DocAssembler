@@ -235,4 +235,44 @@ class DocxRendererTest {
             assertTrue(pChild!!.style == "Subtitle", "Estilo do filho deve ser Subtitle. Atual: ${pChild.style}")
         }
     }
+    @Test
+    fun testRenderWithBaseTemplate() {
+        val templateDir = File("build/test-templates")
+        templateDir.mkdirs()
+        
+        val baseTemplate = File(templateDir, "base.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.createRun().setText("Header do Modelo Base")
+            FileOutputStream(baseTemplate).use { doc.write(it) }
+        }
+
+        val nodeTemplate = File(templateDir, "node.docx")
+        XWPFDocument().use { doc ->
+            val p = doc.createParagraph()
+            p.createRun().setText("Conteúdo do Nodo")
+            FileOutputStream(nodeTemplate).use { doc.write(it) }
+        }
+
+        val document = Document(
+            Document.Metadata("Teste Base", "none"),
+            listOf(DocumentNode(1, nodeTemplate.path))
+        )
+
+        val renderer = DocxRenderer()
+        val outputPath = "build/test-output/result_with_base.docx"
+        File("build/test-output").mkdirs()
+        
+        renderer.render(document, outputPath, baseTemplate.path)
+        
+        assertTrue(File(outputPath).exists(), "O arquivo de saída deve ser gerado")
+        
+        XWPFDocument(File(outputPath).inputStream()).use { doc ->
+            val texts = doc.paragraphs.map { it.text }
+            assertTrue(texts.contains("Header do Modelo Base"), "Deve conter o texto do modelo base")
+            assertTrue(texts.contains("Conteúdo do Nodo"), "Deve conter o conteúdo do nodo")
+            // O texto do modelo base deve vir primeiro se o Emitter simplesmente adicionar parágrafos ao documento existente
+            assertTrue(texts.indexOf("Header do Modelo Base") < texts.indexOf("Conteúdo do Nodo"), "O header do base deve vir antes do conteúdo")
+        }
+    }
 }

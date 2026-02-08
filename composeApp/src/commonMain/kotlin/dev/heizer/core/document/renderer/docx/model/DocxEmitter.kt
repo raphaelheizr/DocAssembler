@@ -4,8 +4,17 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.apache.poi.xwpf.usermodel.XWPFStyle
 
 class DocxEmitter(private val styleRegistry: StyleRegistry) {
-    fun emit(nodes: List<DocNode>): XWPFDocument {
-        val doc = XWPFDocument()
+    fun emit(nodes: List<DocNode>, baseTemplatePath: String? = null): XWPFDocument {
+        val doc = if (baseTemplatePath != null) {
+            val file = java.io.File(baseTemplatePath)
+            if (file.exists()) {
+                java.io.FileInputStream(file).use { XWPFDocument(it) }
+            } else {
+                XWPFDocument()
+            }
+        } else {
+            XWPFDocument()
+        }
         applyStyles(doc)
 
         for (node in nodes) {
