@@ -46,7 +46,7 @@ class EditorViewModel {
     var isSettingsOpen by mutableStateOf(false)
 
     @OptIn(ExperimentalUuidApi::class)
-    fun selectNode(id: Uuid) {
+    fun selectNode(id: Uuid?) {
         selectedNodeId = id
     }
 
@@ -140,13 +140,16 @@ class EditorViewModel {
     private val renderer: DocxRenderer = DocxRenderer()
 
     fun generateDocument() {
-        if (document.validateTemplates().isNotEmpty()) {
-            modalErrorMessage = "Erro: Os modelos personalizados não foram encontrados: ${
-                document.validateTemplates().joinToString(", ")
+        val baseTemplate = getBaseDefinitions()
+        val missing = document.validateTemplates(baseTemplate)
+        if (missing.isNotEmpty()) {
+            modalErrorMessage = "Erro: Os seguintes modelos não foram encontrados: ${
+                missing.joinToString(", ")
             }"
+            return
         }
         runCatching {
-            document.render(renderer, getBaseDefinitions())
+            document.render(renderer, baseTemplate)
             modalSuccessMessage = "Documento gerado com sucesso!"
         }.getOrElse {
             modalErrorMessage = "Erro ao gerar documento: ${it.message}"

@@ -135,12 +135,24 @@ fun App() {
 
 @OptIn(ExperimentalUuidApi::class)
 @Composable
-fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid) -> Unit, onDelete: (DocumentNode) -> Unit) {
+fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column {
-        Text(
-            text = "📄 ${document.metadata.name}",
-            modifier = Modifier.padding(vertical = 4.dp)
-        )
+        val isRootSelected = selectedId == null
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { onSelect(null) },
+            color = if (isRootSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+            shape = MaterialTheme.shapes.small
+        ) {
+            Text(
+                text = "📁 ${document.metadata.name} (Raíz)",
+                modifier = Modifier.padding(8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isRootSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+            )
+        }
         document.nodes.forEach { node ->
             NodeView(node, selectedId, onSelect, onDelete)
         }
@@ -149,7 +161,7 @@ fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid) -> Unit, on
 
 @OptIn(ExperimentalUuidApi::class)
 @Composable
-fun NodeView(node: DocumentNode, selectedId: Uuid?, onSelect: (Uuid) -> Unit, onDelete: (DocumentNode) -> Unit) {
+fun NodeView(node: DocumentNode, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, onDelete: (DocumentNode) -> Unit) {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         val isSelected = node.id == selectedId
 

@@ -102,4 +102,30 @@ class EditorViewModelTest {
         assertTrue(vm2.registry.customBaseTemplateEnabled, "Enabled state should be persisted")
         assertEquals(testPath, vm2.registry.customBaseTemplatePath, "Path should be persisted")
     }
+
+    @Test
+    fun testGenerateDocumentValidatesBaseTemplate() {
+        val vm = EditorViewModel()
+        vm.setCustomTemplateEnabled(true)
+        vm.pickCustomTemplateFileInternal("/path/to/non/existent.docx")
+        
+        vm.generateDocument()
+        
+        assertNotNull(vm.modalErrorMessage)
+        assertTrue(vm.modalErrorMessage!!.contains("non/existent.docx"))
+    }
+
+    @Test
+    fun testSelectRootNode() {
+        val vm = EditorViewModel()
+        val def = DocumentNodeDefinition("1", "Test", "Desc", "templates/title.docx")
+        vm.addComponent(def)
+        val nodeId = vm.document.nodes.first().id
+        vm.selectNode(nodeId)
+        
+        assertEquals(nodeId, vm.selectedNodeId)
+        
+        vm.selectNode(null)
+        assertNull(vm.selectedNodeId, "Selecting null should set selectedNodeId to null (root)")
+    }
 }

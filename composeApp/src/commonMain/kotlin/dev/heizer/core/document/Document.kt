@@ -68,8 +68,15 @@ data class Document(
         }
     }
 
-    fun validateTemplates(): List<String> {
+    fun validateTemplates(baseTemplatePath: String? = null): List<String> {
         val missingTemplates = mutableSetOf<String>()
+
+        baseTemplatePath?.let {
+            val file = java.io.File(it)
+            if (!file.exists()) {
+                missingTemplates.add(it)
+            }
+        }
 
         fun checkNodes(nodes: List<DocumentNode>) {
             nodes.forEach { node ->
