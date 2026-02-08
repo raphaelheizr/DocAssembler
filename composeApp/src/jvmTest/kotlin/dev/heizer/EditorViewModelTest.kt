@@ -91,7 +91,7 @@ class EditorViewModelTest {
         val vm = EditorViewModel()
         val testPath = "/tmp/test.docx"
         
-        vm.toggleCustomTemplate(true)
+        vm.setCustomTemplateEnabled(true)
         vm.pickCustomTemplateFileInternal(testPath)
         
         // Simular recarregamento

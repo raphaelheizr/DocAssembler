@@ -31,8 +31,9 @@ class EditorViewModel {
 
     var document by mutableStateOf(Document.create("Novo Documento"))
 
-    var errorMessage by mutableStateOf<String?>(null)
-    var successMessage by mutableStateOf<String?>(null)
+    // Used in App.kt for modal/dialog message show TODO: Move to UI layer; fazer um hook/callback que envie as mensagens pro UI ao invés de manter aqui o estado
+    var modalErrorMessage by mutableStateOf<String?>(null)
+    var modalSuccessMessage by mutableStateOf<String?>(null)
 
     @OptIn(ExperimentalUuidApi::class)
     var selectedNodeId by mutableStateOf<Uuid?>(null)
@@ -57,16 +58,21 @@ class EditorViewModel {
     internal fun pickCustomTemplateFileInternal(path: String) {
         registry.copy(customBaseTemplatePath = path)
             .also {
-                saveSettings()
+                registry = it
             }
-    }
-
-    fun toggleCustomTemplate(enabled: Boolean) {
-        registry.copy(customBaseTemplateEnabled = enabled)
             .also {
                 saveSettings()
             }
     }
+
+    fun setCustomTemplateEnabled(enabled: Boolean) =
+        registry.copy(customBaseTemplateEnabled = enabled)
+            .also {
+                registry = it
+            }
+            .also {
+                saveSettings()
+            }
 
     fun saveSettings() = registry.save(repository)
 
@@ -105,13 +111,15 @@ class EditorViewModel {
 
     fun generateDocument() {
         if (document.validateTemplates().isNotEmpty()) {
-            errorMessage = "Erro: Os modelos personalizados não foram encontrados: ${document.validateTemplates().joinToString(", ")}"
+            modalErrorMessage = "Erro: Os modelos personalizados não foram encontrados: ${
+                document.validateTemplates().joinToString(", ")
+            }"
         }
         runCatching {
             document.render(renderer, getBaseDefinitions())
-            successMessage = "Documento gerado com sucesso!"
+            modalSuccessMessage = "Documento gerado com sucesso!"
         }.getOrElse {
-            errorMessage = "Erro ao gerar documento: ${it.message}"
+            modalErrorMessage = "Erro ao gerar documento: ${it.message}"
         }
     }
 

@@ -46,29 +46,29 @@ fun App() {
                     SettingsScreen(viewModel)
                 }
 
-                if (viewModel.errorMessage != null) {
+                if (viewModel.modalErrorMessage != null) {
                     AlertDialog(
-                        onDismissRequest = { viewModel.errorMessage = null },
+                        onDismissRequest = { viewModel.modalErrorMessage = null },
                         confirmButton = {
-                            TextButton(onClick = { viewModel.errorMessage = null }) {
+                            TextButton(onClick = { viewModel.modalErrorMessage = null }) {
                                 Text("OK")
                             }
                         },
                         title = { Text("Erro") },
-                        text = { Text(viewModel.errorMessage!!) }
+                        text = { Text(viewModel.modalErrorMessage!!) }
                     )
                 }
 
-                if (viewModel.successMessage != null) {
+                if (viewModel.modalSuccessMessage != null) {
                     AlertDialog(
-                        onDismissRequest = { viewModel.successMessage = null },
+                        onDismissRequest = { viewModel.modalSuccessMessage = null },
                         confirmButton = {
-                            TextButton(onClick = { viewModel.successMessage = null }) {
+                            TextButton(onClick = { viewModel.modalSuccessMessage = null }) {
                                 Text("OK")
                             }
                         },
                         title = { Text("Sucesso") },
-                        text = { Text(viewModel.successMessage!!) }
+                        text = { Text(viewModel.modalSuccessMessage!!) }
                     )
                 }
 
@@ -221,7 +221,7 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = viewModel.registry.customBaseTemplateEnabled,
-                        onCheckedChange = { viewModel.toggleCustomTemplate(it) }
+                        onCheckedChange = { checked -> viewModel.setCustomTemplateEnabled(checked) }
                     )
                     Text("Usar modelo-base personalizado")
                 }

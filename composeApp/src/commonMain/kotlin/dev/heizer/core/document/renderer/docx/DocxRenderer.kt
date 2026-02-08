@@ -17,19 +17,24 @@ import java.io.FileOutputStream
 
 class DocxRenderer : DocumentRenderer {
 
+    companion object {
+        private const val FILE_EXTENSION = "docx"
+    }
+
     override fun render(document: Document, path: String, baseTemplatePath: String?) {
         val styleRegistry = StyleRegistry()
         val parser = FragmentParser(styleRegistry)
         val engine = InterpolationEngine()
         val emitter = DocxEmitter(styleRegistry)
 
-        val rootNodes = document.nodes.flatMap { node ->
-            renderNodeToAST(node, parser, engine)
-        }
+        val rootNodes = document.nodes
+            .flatMap { node ->
+                renderNodeToAST(node, parser, engine)
+            }
 
         val resultDocument = emitter.emit(rootNodes, baseTemplatePath)
 
-        val file = File(path)
+        val file = File("$path.$FILE_EXTENSION")
         file.parentFile?.mkdirs()
 
         FileOutputStream(file)
@@ -49,11 +54,11 @@ class DocxRenderer : DocumentRenderer {
         val templateNodes = templateDoc.use { parser.parse(it) }
 
         if (node.children.isNotEmpty()) {
-            val hasPlaceholder = templateNodes.any { 
+            val hasPlaceholder = templateNodes.any {
                 it is PlaceholderNode || (it is ParagraphNode && it.runs.any { r -> r.text.contains("{%}") })
             }
-            if (!hasPlaceholder) {
-                throw IllegalStateException("Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}")
+            check(hasPlaceholder) {
+                "Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}"
             }
         }
 
@@ -67,16 +72,17 @@ class DocxRenderer : DocumentRenderer {
         }
 
         // Criar mapa de interpolação
-        // Para simplificar, associamos todos os placeholders deste template aos filhos deste node
+        // Para simplificar, associamos todos os placeholders deste modelo aos filhos deste node
         val placeholders = templateNodes.filterIsInstance<PlaceholderNode>()
-        val inlinePlaceholders = templateNodes.filterIsInstance<ParagraphNode>().filter { p -> p.runs.any { it.text.contains("{%}") } }
-        
+        val inlinePlaceholders =
+            templateNodes.filterIsInstance<ParagraphNode>().filter { p -> p.runs.any { it.text.contains("{%}") } }
+
         val childrenMap = mutableMapOf<PlaceholderNode, List<DocNode>>()
-        
+
         if (placeholders.isNotEmpty()) {
             placeholders.forEach { childrenMap[it] = childrenAST }
         }
-        
+
         if (inlinePlaceholders.isNotEmpty()) {
             inlinePlaceholders.forEach { p ->
                 val virtualPlaceholder = PlaceholderNode(p.pPr, p.runs.find { it.text.contains("{%}") }?.rPr)
@@ -92,4 +98,5 @@ class DocxRenderer : DocumentRenderer {
         require(templateFile.exists()) { "Template não encontrado: $path" }
         return FileInputStream(templateFile).use { XWPFDocument(it) }
     }
+
 }

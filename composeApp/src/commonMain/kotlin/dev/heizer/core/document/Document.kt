@@ -1,7 +1,6 @@
 package dev.heizer.core.document
 
 import dev.heizer.core.document.renderer.DocumentRenderer
-import dev.heizer.core.file.Repository
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -17,8 +16,13 @@ data class Document(
         val templatePath: String
     )
 
-    fun save(repository: Repository<Document>) =
-        save(repository, OUTPUT_FILE_PATH, this)
+    companion object {
+        private const val OUTPUT_FILE_PATH = "../out/output"
+
+        fun create(name: String, relativePath: String = OUTPUT_FILE_PATH) =
+            Document(Metadata(name, relativePath), emptyList())
+
+    }
 
     fun render(renderer: DocumentRenderer, baseTemplatePath: String? = null) {
         renderer.render(this, OUTPUT_FILE_PATH, baseTemplatePath)
@@ -79,20 +83,6 @@ data class Document(
 
         checkNodes(this.nodes)
         return missingTemplates.toList()
-    }
-
-    companion object {
-        private const val OUTPUT_FILE_PATH = "../out/output"
-
-        fun load(repository: Repository<Document>, filePath: String): Document =
-            repository.load(filePath)
-
-        fun save(repository: Repository<Document>, filePath: String, document: Document) =
-            repository.save(filePath, document)
-
-        fun create(name: String, relativePath: String = OUTPUT_FILE_PATH) =
-            Document(Metadata(name, relativePath), emptyList())
-
     }
 
 }
