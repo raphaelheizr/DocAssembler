@@ -4,10 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.heizer.core.document.Document
-import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.core.document.DocumentNode
+import dev.heizer.core.document.DocumentNodeDefinition
 import dev.heizer.core.document.renderer.DocxRenderer
-import java.io.File
 
 class EditorViewModel {
     var document by mutableStateOf(Document.create("Novo Documento"))
