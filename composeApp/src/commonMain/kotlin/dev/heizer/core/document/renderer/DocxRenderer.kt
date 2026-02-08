@@ -4,7 +4,7 @@ import dev.heizer.core.document.Document
 
 class DocxRenderer : DocumentRenderer {
 
-    override fun render(document: Document.Companion, string: String) {
+    override fun render(document: Document, path: String) {
         TODO("Not yet implemented")
     }
 
