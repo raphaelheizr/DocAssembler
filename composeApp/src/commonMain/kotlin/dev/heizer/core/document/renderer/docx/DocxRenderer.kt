@@ -53,28 +53,36 @@ class DocxRenderer : DocumentRenderer {
         val templateNodes = templateDoc.use { parser.parse(it) }
 
         if (node.children.isNotEmpty()) {
-            val hasPlaceholder = templateNodes.any {
-                it is PlaceholderNode || (it is ParagraphNode && it.runs.any { r -> r.text.contains("{%}") })
-            }
+            val hasPlaceholder = templateNodes
+                .any {
+                    it is PlaceholderNode || (it is ParagraphNode && it.runs.any { r -> r.text.contains("{%}") })
+                }
+
             check(hasPlaceholder) {
                 "Não é possível interpolar sem a sequência {%} no template: ${node.templatePath}"
             }
         }
 
         if (node.children.isEmpty()) {
-            // Se não tem filhos, apenas removemos o placeholder se existir
             return engine.interpolate(templateNodes, emptyMap())
         }
 
-        val childrenAST = node.children.flatMap { child ->
-            renderNodeToAST(child, parser, engine)
-        }
+        val childrenAST = node
+            .children
+            .flatMap { child ->
+                renderNodeToAST(child, parser, engine)
+            }
 
-        // Criar mapa de interpolação
-        // Para simplificar, associamos todos os placeholders deste modelo aos filhos deste node
         val placeholders = templateNodes.filterIsInstance<PlaceholderNode>()
+
         val inlinePlaceholders =
-            templateNodes.filterIsInstance<ParagraphNode>().filter { p -> p.runs.any { it.text.contains("{%}") } }
+            templateNodes
+                .filterIsInstance<ParagraphNode>()
+                .filter { p ->
+                    p.runs.any {
+                        it.text.contains("{%}")
+                    }
+                }
 
         val childrenMap = mutableMapOf<PlaceholderNode, List<DocNode>>()
 

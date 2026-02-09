@@ -66,7 +66,7 @@ class StyleRegistry {
 
     fun getAllStyles(): Collection<CTStyle> = styles.values
 
-    fun getStyleId(styleId: String, sourceDoc: XWPFDocument): String {
+    fun getStyleId(styleId: String, sourceDoc: XWPFDocument): String { // TODO: Revisar essa função e quem chama ela
         if (!styles.containsKey(styleId)) {
             sourceDoc.styles?.let { sourceStyles ->
                 val style = try {

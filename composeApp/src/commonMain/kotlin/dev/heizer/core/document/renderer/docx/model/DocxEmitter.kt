@@ -1,9 +1,8 @@
 package dev.heizer.core.document.renderer.docx.model
 
+import org.apache.poi.xwpf.usermodel.Document
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.apache.poi.xwpf.usermodel.XWPFStyle
-import org.apache.poi.xwpf.usermodel.Document
-import org.apache.poi.util.Units
 
 class DocxEmitter(private val styleRegistry: StyleRegistry) {
     fun emit(nodes: List<DocNode>, baseTemplatePath: String? = null): XWPFDocument {

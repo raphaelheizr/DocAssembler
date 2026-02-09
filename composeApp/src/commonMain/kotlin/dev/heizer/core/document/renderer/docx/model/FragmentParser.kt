@@ -1,11 +1,6 @@
 package dev.heizer.core.document.renderer.docx.model
 
-import org.apache.poi.xwpf.usermodel.XWPFDocument
-import org.apache.poi.xwpf.usermodel.XWPFParagraph
-import org.apache.poi.xwpf.usermodel.XWPFTable
-import org.apache.poi.xwpf.usermodel.BodyElementType
-import org.apache.poi.xwpf.usermodel.IBodyElement
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
+import org.apache.poi.xwpf.usermodel.*
 
 interface BodyElementParser {
     fun canParse(element: IBodyElement): Boolean
@@ -20,9 +15,9 @@ class ParagraphElementParser : BodyElementParser {
         return if (p.text.trim() == "{%}") {
             PlaceholderNode(p.ctp.pPr, p.runs.find { it.text().contains("{%}") }?.ctr?.rPr)
         } else {
-            val styleId = p.style?.let { styleRegistry.getStyleId(it, doc) }
+            val styleId = p.style?.let { styleRegistry.getStyleId(it, doc) } // TODO: Chamada suspeita do getStyleId
             val runs = p.runs.map { r ->
-                val rStyleId = r.style?.let { styleRegistry.getStyleId(it, doc) }
+                val rStyleId = r.style?.let { styleRegistry.getStyleId(it, doc) } // TODO: Chamada suspeita do getStyleId
                 val images = r.embeddedPictures.map { pic ->
                     ImageNode(
                         pic.pictureData.data,
