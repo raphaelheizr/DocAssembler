@@ -1,11 +1,14 @@
 package dev.heizer.core.document.renderer.docx.model
 
 import org.apache.poi.xwpf.usermodel.XWPFDocument
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyle
+import org.apache.xmlbeans.XmlObject
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*
 
 sealed class DocNode
+
+data class GenericNode(
+    val xmlObject: XmlObject
+) : DocNode()
 
 data class ParagraphNode(
     val styleId: String?,
@@ -16,8 +19,32 @@ data class ParagraphNode(
 data class RunNode(
     val text: String,
     val styleId: String?,
-    val rPr: CTRPr?
+    val rPr: CTRPr?,
+    val images: List<ImageNode> = emptyList()
 ) : DocNode()
+
+data class ImageNode(
+    val data: ByteArray,
+    val extension: String
+) : DocNode() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ImageNode
+
+        if (!data.contentEquals(other.data)) return false
+        if (extension != other.extension) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = data.contentHashCode()
+        result = 31 * result + extension.hashCode()
+        return result
+    }
+}
 
 data class PlaceholderNode(
     val originalParagraphPPr: CTPPr?,
@@ -31,11 +58,9 @@ class StyleRegistry {
         styles.putIfAbsent(styleId, styleDef)
     }
 
-    fun getStyle(styleId: String): CTStyle? = styles[styleId]
-    
     fun getAllStyles(): Collection<CTStyle> = styles.values
 
-    fun ensure(styleId: String, sourceDoc: XWPFDocument): String {
+    fun getStyleId(styleId: String, sourceDoc: XWPFDocument): String {
         if (!styles.containsKey(styleId)) {
             val sourceStyles = sourceDoc.styles
             if (sourceStyles != null) {
