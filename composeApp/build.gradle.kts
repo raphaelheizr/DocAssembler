@@ -11,6 +11,7 @@ plugins {
 kotlin {
     jvm()
     val jsonSerializerVersion = "1.8.0"
+    val apachePoiVersion = "5.3.0"
 
     sourceSets {
         commonMain.dependencies {
@@ -28,8 +29,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation("org.apache.poi:poi:5.3.0")
-            implementation("org.apache.poi:poi-ooxml:5.3.0")
+            implementation("org.apache.poi:poi:$apachePoiVersion")
+            implementation("org.apache.poi:poi-ooxml:$apachePoiVersion")
         }
     }
 }
@@ -41,7 +42,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "dev.heizer"
+            packageName = "DocAssembler"
             packageVersion = "1.0.0"
         }
     }

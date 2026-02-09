@@ -7,7 +7,9 @@ import kotlinx.serialization.Serializable
 data class DocumentNodeDefinitionRegistry(
     val definitions: List<DocumentNodeDefinition>,
     val customBaseTemplateEnabled: Boolean,
-    val customBaseTemplatePath: String
+    val customBaseTemplatePath: String,
+    val outputPath: String = "",
+    val outputFileName: String = "output.docx"
 ) {
     companion object {
         const val DEFAULT_BASE_TEMPLATE_PATH = "./configs/templates/base-template.docx"

@@ -24,8 +24,8 @@ data class Document(
 
     }
 
-    fun render(renderer: DocumentRenderer, baseTemplatePath: String? = null) {
-        renderer.render(this, OUTPUT_FILE_PATH, baseTemplatePath)
+    fun render(renderer: DocumentRenderer, outputPath: String, baseTemplatePath: String? = null) {
+        renderer.render(this, outputPath, baseTemplatePath)
     }
 
     @OptIn(ExperimentalUuidApi::class)

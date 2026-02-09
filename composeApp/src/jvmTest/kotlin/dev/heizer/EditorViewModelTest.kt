@@ -109,10 +109,26 @@ class EditorViewModelTest {
         vm.setCustomTemplateEnabled(true)
         vm.pickCustomTemplateFileInternal("/path/to/non/existent.docx")
         
-        vm.generateDocument()
+        vm.generateDocument("out", "test.docx")
         
         assertNotNull(vm.modalErrorMessage)
         assertTrue(vm.modalErrorMessage!!.contains("non/existent.docx"))
+    }
+
+    @Test
+    fun testGenerateDocumentPersistsOutputPathAndFileName() {
+        val vm = EditorViewModel()
+        val testOutputPath = "out"
+        val testFileName = "meu_contrato.docx"
+        
+        // Simular a abertura do diálogo e a geração
+        vm.openGenerateDialog()
+        vm.generateDocument(testOutputPath, testFileName)
+        
+        // Verificar persistência ao recarregar criando nova instância
+        val vm2 = EditorViewModel()
+        assertEquals(testOutputPath, vm2.registry.outputPath, "OutputPath should be persisted across instances")
+        assertEquals(testFileName, vm2.registry.outputFileName, "OutputFileName should be persisted across instances")
     }
 
     @Test

@@ -51,7 +51,7 @@ fun App() {
                                 Text("⚙")
                             }
                             Button(
-                                onClick = { viewModel.generateDocument() },
+                                onClick = { viewModel.openGenerateDialog() },
                                 shape = MaterialTheme.shapes.medium,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             ) {
@@ -106,6 +106,56 @@ fun App() {
                         },
                         title = { Text("Confirmar Exclusão") },
                         text = { Text("Este nodo possui filhos. Excluir este nodo também excluirá todos os seus filhos. Deseja continuar?") }
+                    )
+                }
+
+                if (viewModel.isGenerateDialogOpen) {
+                    AlertDialog(
+                        onDismissRequest = { viewModel.isGenerateDialogOpen = false },
+                        title = { Text("Gerar Arquivo") },
+                        text = {
+                            Column {
+                                Text("Defina o nome do arquivo e a pasta de destino:")
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedTextField(
+                                    value = viewModel.currentOutputFileName,
+                                    onValueChange = { viewModel.currentOutputFileName = it },
+                                    label = { Text("Nome do Arquivo") },
+                                    placeholder = { Text("ex: contrato") },
+                                    supportingText = { Text("O arquivo será salvo com a extensão .docx") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Button(
+                                        onClick = { viewModel.pickOutputDirectory() },
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text("ESCOLHER PASTA")
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = viewModel.currentOutputPath.ifBlank { "Nenhuma pasta selecionada" },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = { viewModel.generateDocument(viewModel.currentOutputPath, viewModel.currentOutputFileName) },
+                                enabled = viewModel.currentOutputPath.isNotBlank() && viewModel.currentOutputFileName.isNotBlank()
+                            ) {
+                                Text("Gerar")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { viewModel.isGenerateDialogOpen = false }) {
+                                Text("Cancelar")
+                            }
+                        }
                     )
                 }
 

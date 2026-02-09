@@ -26,7 +26,7 @@ class EditorViewModel {
         runCatching {
             DocumentNodeDefinitionRegistry.Factory.load(repository)
         }.getOrElse { ex ->
-            print("Erro ao carregar configurações: ${ex.message}. Usando configurações padrão")
+            println("Erro ao carregar configurações: ${ex.message}. Usando configurações padrão")
             DocumentNodeDefinitionRegistry.Factory.empty()
                 .also {
                     it.save(repository)
@@ -44,10 +44,23 @@ class EditorViewModel {
     var selectedNodeId by mutableStateOf<Uuid?>(null)
 
     var isSettingsOpen by mutableStateOf(false)
+    var isGenerateDialogOpen by mutableStateOf(false)
+    var currentOutputPath by mutableStateOf(registry.outputPath)
+    var currentOutputFileName by mutableStateOf(registry.outputFileName)
 
     @OptIn(ExperimentalUuidApi::class)
     fun selectNode(id: Uuid?) {
         selectedNodeId = id
+    }
+
+    fun openGenerateDialog() {
+        currentOutputPath = registry.outputPath
+        currentOutputFileName = if (registry.outputFileName.isBlank()) "output.docx" else registry.outputFileName
+        isGenerateDialogOpen = true
+    }
+
+    fun closeGenerateDialog() {
+        isGenerateDialogOpen = false
     }
 
     fun pickCustomTemplateFile() {
@@ -139,7 +152,21 @@ class EditorViewModel {
 
     private val renderer: DocxRenderer = DocxRenderer()
 
-    fun generateDocument() {
+    fun pickOutputDirectory() {
+        val chooser = JFileChooser()
+        chooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+        val result = chooser.showOpenDialog(null)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            currentOutputPath = chooser.selectedFile.absolutePath
+        }
+    }
+
+    fun generateDocument(outputPath: String, fileName: String) {
+        // Atualiza o outputPath e outputFileName no registro e salva imediatamente
+        val sanitizedFileName = if (fileName.lowercase().endsWith(".docx")) fileName else "$fileName.docx"
+        registry = registry.copy(outputPath = outputPath, outputFileName = sanitizedFileName)
+        saveSettings()
+
         val baseTemplate = getBaseDefinitions()
         val missing = document.validateTemplates(baseTemplate)
         if (missing.isNotEmpty()) {
@@ -148,11 +175,21 @@ class EditorViewModel {
             }"
             return
         }
+
         runCatching {
-            document.render(renderer, baseTemplate)
+            val fullPath = if (outputPath.endsWith("/") || outputPath.endsWith("\\")) {
+                "$outputPath$sanitizedFileName"
+            } else {
+                "$outputPath/$sanitizedFileName"
+            }
+            // Removemos a extensão .docx do fullPath pois o DocxRenderer adiciona automaticamente
+            val pathWithoutExtension = fullPath.removeSuffix(".docx")
+
+            document.render(renderer, pathWithoutExtension, baseTemplate)
             modalSuccessMessage = "Documento gerado com sucesso!"
-        }.getOrElse {
-            modalErrorMessage = "Erro ao gerar documento: ${it.message}"
+            isGenerateDialogOpen = false
+        }.getOrElse { ex ->
+            modalErrorMessage = "Erro ao gerar documento: ${ex.message}"
         }
     }
 
