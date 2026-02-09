@@ -284,6 +284,7 @@ fun SettingsScreen(viewModel: EditorViewModel) {
 
     AlertDialog(
         onDismissRequest = { viewModel.isSettingsOpen = false },
+        modifier = Modifier.widthIn(min = 600.dp).heightIn(max = 800.dp),
         confirmButton = {
             TextButton(onClick = { viewModel.isSettingsOpen = false }) {
                 Text("FECHAR")
@@ -359,11 +360,19 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                         Text("+", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Text("""Para utilizar interpolação, insira um único {%} no corpo do documento.
+                    |
+                    |Desta forma, o modelo selecionado será inserido no lugar do bloco.
+                """.trimMargin()
+                    , style = MaterialTheme.typography.bodySmall)
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 LazyColumn(
-                    modifier = Modifier.heightIn(max = 300.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    userScrollEnabled = true
                 ) {
                     items(viewModel.registry.definitions) { definition ->
                         Surface(
@@ -435,6 +444,7 @@ fun DefinitionEditDialog(
                     onValueChange = { name = it },
                     label = { Text("NOME") },
                     modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     colors = TextFieldDefaults.colors(
                         unfocusedContainerColor = Color(0xFFF2F2F2),
@@ -448,6 +458,7 @@ fun DefinitionEditDialog(
                     onValueChange = { description = it },
                     label = { Text("DESCRIÇÃO") },
                     modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     colors = TextFieldDefaults.colors(
                         unfocusedContainerColor = Color(0xFFF2F2F2),
