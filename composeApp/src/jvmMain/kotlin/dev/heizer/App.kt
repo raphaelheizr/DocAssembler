@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -165,7 +167,11 @@ fun App() {
                         modifier = Modifier.weight(0.7f).fillMaxHeight(),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 "ESTRUTURA",
                                 style = MaterialTheme.typography.labelMedium,
