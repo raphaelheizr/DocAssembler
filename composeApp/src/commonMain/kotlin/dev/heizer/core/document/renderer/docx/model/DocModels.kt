@@ -26,8 +26,8 @@ data class RunNode(
 data class ImageNode(
     val data: ByteArray,
     val extension: String,
-    val width: Double,
-    val height: Double
+    val width: Long,
+    val height: Long
 ) : DocNode() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

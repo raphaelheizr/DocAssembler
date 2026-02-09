@@ -27,8 +27,8 @@ class ParagraphElementParser : BodyElementParser {
                     ImageNode(
                         pic.pictureData.data,
                         pic.pictureData.suggestFileExtension(),
-                        pic.ctPicture.spPr.xfrm.ext.cx / 9525.0,
-                        pic.ctPicture.spPr.xfrm.ext.cy / 9525.0
+                        pic.ctPicture.spPr.xfrm.ext.cx,
+                        pic.ctPicture.spPr.xfrm.ext.cy
                     )
                 }
                 RunNode(r.text(), rStyleId, r.ctr.rPr, images)

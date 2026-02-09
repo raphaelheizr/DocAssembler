@@ -78,8 +78,8 @@ class DocxEmitter(private val styleRegistry: StyleRegistry) {
                         imageNode.data.inputStream(),
                         format,
                         "image.${imageNode.extension}",
-                        Units.toEMU(imageNode.width),
-                        Units.toEMU(imageNode.height)
+                        imageNode.width.toInt(),
+                        imageNode.height.toInt()
                     )
                 } catch (e: Exception) {
                     // Log error or handle
