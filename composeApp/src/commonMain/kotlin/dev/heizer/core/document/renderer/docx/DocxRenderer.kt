@@ -32,17 +32,16 @@ class DocxRenderer : DocumentRenderer {
                 renderNodeToAST(node, parser, engine)
             }
 
-        val resultDocument = emitter.emit(rootNodes, baseTemplatePath)
+        emitter.emit(rootNodes, baseTemplatePath)
+            .use { resultDocument ->
+                val file = File("${path.removeSuffix(".$FILE_EXTENSION")}.$FILE_EXTENSION")
+                    .apply {
+                        parentFile
+                            ?.mkdirs()
+                    }
 
-        val file = File("$path.$FILE_EXTENSION")
-        file.parentFile?.mkdirs()
-
-        FileOutputStream(file)
-            .use { out ->
-                resultDocument.write(out)
+                file.outputStream().use(resultDocument::write)
             }
-
-        resultDocument.close()
     }
 
     private fun renderNodeToAST(

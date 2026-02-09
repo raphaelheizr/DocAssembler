@@ -22,6 +22,47 @@ data class Document(
         fun create(name: String, relativePath: String = OUTPUT_FILE_PATH) =
             Document(Metadata(name, relativePath), emptyList())
 
+        @OptIn(ExperimentalUuidApi::class)
+        private fun removeNodeFromList(nodes: List<DocumentNode>, nodeId: Uuid): List<DocumentNode> {
+            return nodes
+                .filter { it.id != nodeId }
+                .map { node ->
+                    if (node.children.isNotEmpty()) {
+                        node.copy(children = removeNodeFromList(node.children, nodeId))
+                    } else {
+                        node
+                    }
+                }
+        }
+
+        fun checkIfNodeExists(nodes: List<DocumentNode>): Boolean =
+            nodes.any { node ->
+                java.io.File(node.templatePath).exists() ||
+                        checkIfNodeExists(node.children)
+            }
+
+
+        @OptIn(ExperimentalUuidApi::class)
+        private fun addChildToNode(nodes: List<DocumentNode>, targetId: Uuid, newNode: DocumentNode): List<DocumentNode> =
+            nodes
+                .map { node ->
+                    when {
+                        node.id == targetId ->
+                            node.copy(children = node.children + newNode)
+
+                        node.children.isNotEmpty() -> {
+                            val updatedChildren = addChildToNode(node.children, targetId, newNode)
+
+                            if (updatedChildren !== node.children)
+                                node.copy(children = updatedChildren)
+                            else
+                                node
+                        }
+
+                        else -> node
+                    }
+                }
+
     }
 
     fun render(renderer: DocumentRenderer, outputPath: String, baseTemplatePath: String? = null) {
@@ -43,53 +84,19 @@ data class Document(
         return this.copy(nodes = newNodes)
     }
 
-    @OptIn(ExperimentalUuidApi::class)
-    private fun removeNodeFromList(nodes: List<DocumentNode>, nodeId: Uuid): List<DocumentNode> {
-        return nodes.filter { it.id != nodeId }
-            .map { node ->
-                if (node.children.isNotEmpty()) {
-                    node.copy(children = removeNodeFromList(node.children, nodeId))
-                } else {
-                    node
-                }
-            }
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    private fun addChildToNode(nodes: List<DocumentNode>, targetId: Uuid, newNode: DocumentNode): List<DocumentNode> {
-        return nodes.map { node ->
-            if (node.id == targetId) {
-                node.copy(children = node.children + newNode)
-            } else if (node.children.isNotEmpty()) {
-                node.copy(children = addChildToNode(node.children, targetId, newNode))
-            } else {
-                node
-            }
-        }
-    }
-
-    fun validateTemplates(baseTemplatePath: String? = null): List<String> {
+    fun validateTemplates(baseTemplatePath: String? = null): Set<String> {
         val missingTemplates = mutableSetOf<String>()
 
-        baseTemplatePath?.let {
-            val file = java.io.File(it)
-            if (!file.exists()) {
-                missingTemplates.add(it)
-            }
-        }
-
-        fun checkIfNodeExists(nodes: List<DocumentNode>) {
-            nodes.forEach { node ->
-                val file = java.io.File(node.templatePath)
+        baseTemplatePath
+            ?.let {
+                val file = java.io.File(it)
                 if (!file.exists()) {
-                    missingTemplates.add(node.templatePath)
+                    missingTemplates.add(it)
                 }
-                checkIfNodeExists(node.children)
             }
-        }
 
         checkIfNodeExists(this.nodes)
-        return missingTemplates.toList()
+        return missingTemplates
     }
 
 }

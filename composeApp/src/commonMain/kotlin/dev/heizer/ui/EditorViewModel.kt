@@ -34,6 +34,8 @@ class EditorViewModel {
         }
     )
 
+    private val renderer: DocxRenderer = DocxRenderer()
+
     var document by mutableStateOf(Document.create("Novo Documento"))
 
     // Used in App.kt for modal/dialog message show TODO: Move to UI layer; fazer um hook/callback que envie as mensagens pro UI ao invés de manter aqui o estado
@@ -55,12 +57,8 @@ class EditorViewModel {
 
     fun openGenerateDialog() {
         currentOutputPath = registry.outputPath
-        currentOutputFileName = if (registry.outputFileName.isBlank()) "output.docx" else registry.outputFileName
+        currentOutputFileName = registry.outputFileName.ifBlank { "output.docx" }
         isGenerateDialogOpen = true
-    }
-
-    fun closeGenerateDialog() {
-        isGenerateDialogOpen = false
     }
 
     fun pickCustomTemplateFile() {
@@ -93,11 +91,13 @@ class EditorViewModel {
             }
 
     fun addOrUpdateDefinition(definition: DocumentNodeDefinition) {
-        val newDefinitions = if (registry.definitions.any { it.id == definition.id }) {
-            registry.definitions.map { if (it.id == definition.id) definition else it }
-        } else {
-            registry.definitions + definition
-        }
+        val newDefinitions =
+            if (registry.definitions.any { it.id == definition.id }) {
+                registry.definitions.map { if (it.id == definition.id) definition else it }
+            } else {
+                registry.definitions + definition
+            }
+
         registry = registry.copy(definitions = newDefinitions)
         saveSettings()
     }
@@ -135,22 +135,20 @@ class EditorViewModel {
         if (node.children.isNotEmpty()) {
             pendingDeleteNode = node
         } else {
-            confirmDeleteNode(node.id)
+            deleteNode(node.id)
         }
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    fun confirmDeleteNode(nodeId: Uuid) {
+    fun deleteNode(nodeId: Uuid) {
         document = document.removeNode(nodeId)
         selectedNodeId = null
         pendingDeleteNode = null
     }
 
-    fun cancelDelete() {
+    fun cancelDeleteNode() {
         pendingDeleteNode = null
     }
-
-    private val renderer: DocxRenderer = DocxRenderer()
 
     fun pickOutputDirectory() {
         val chooser = JFileChooser()
@@ -162,30 +160,21 @@ class EditorViewModel {
     }
 
     fun generateDocument(outputPath: String, fileName: String) {
-        // Atualiza o outputPath e outputFileName no registro e salva imediatamente
-        val sanitizedFileName = if (fileName.lowercase().endsWith(".docx")) fileName else "$fileName.docx"
-        registry = registry.copy(outputPath = outputPath, outputFileName = sanitizedFileName)
+        registry = registry.copy(outputPath = outputPath, outputFileName = fileName)
         saveSettings()
 
         val baseTemplate = getBaseDefinitions()
         val missing = document.validateTemplates(baseTemplate)
+
         if (missing.isNotEmpty()) {
-            modalErrorMessage = "Erro: Os seguintes modelos não foram encontrados: ${
-                missing.joinToString(", ")
-            }"
+            modalErrorMessage = "Erro: Os seguintes modelos não foram encontrados: ${missing.joinToString(", ")}"
             return
         }
 
         runCatching {
-            val fullPath = if (outputPath.endsWith("/") || outputPath.endsWith("\\")) {
-                "$outputPath$sanitizedFileName"
-            } else {
-                "$outputPath/$sanitizedFileName"
-            }
-            // Removemos a extensão .docx do fullPath pois o DocxRenderer adiciona automaticamente
-            val pathWithoutExtension = fullPath.removeSuffix(".docx")
+            val fullPath = "${outputPath.removeSuffix("/")}/$fileName"
 
-            document.render(renderer, pathWithoutExtension, baseTemplate)
+            document.render(renderer, fullPath, baseTemplate)
             modalSuccessMessage = "Documento gerado com sucesso!"
             isGenerateDialogOpen = false
         }.getOrElse { ex ->

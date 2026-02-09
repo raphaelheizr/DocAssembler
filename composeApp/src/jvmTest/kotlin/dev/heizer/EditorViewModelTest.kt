@@ -83,7 +83,7 @@ class EditorViewModelTest {
         assertNotNull(vm.pendingDeleteNode, "Should have pending delete")
         assertEquals(parentNode.id, vm.pendingDeleteNode?.id)
         
-        vm.confirmDeleteNode(parentNode.id)
+        vm.deleteNode(parentNode.id)
         assertTrue(vm.document.nodes.isEmpty(), "Node and children should be removed after confirmation")
         assertNull(vm.pendingDeleteNode, "Pending delete should be cleared")
     }

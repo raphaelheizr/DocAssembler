@@ -1,6 +1,5 @@
 package dev.heizer
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -95,14 +94,14 @@ fun App() {
 
                 if (viewModel.pendingDeleteNode != null) {
                     AlertDialog(
-                        onDismissRequest = { viewModel.cancelDelete() },
+                        onDismissRequest = { viewModel.cancelDeleteNode() },
                         confirmButton = {
-                            TextButton(onClick = { viewModel.confirmDeleteNode(viewModel.pendingDeleteNode!!.id) }) {
+                            TextButton(onClick = { viewModel.deleteNode(viewModel.pendingDeleteNode!!.id) }) {
                                 Text("Confirmar")
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = { viewModel.cancelDelete() }) {
+                            TextButton(onClick = { viewModel.cancelDeleteNode() }) {
                                 Text("Cancelar")
                             }
                         },
