@@ -78,17 +78,17 @@ data class Document(
             }
         }
 
-        fun checkNodes(nodes: List<DocumentNode>) {
+        fun checkIfNodeExists(nodes: List<DocumentNode>) {
             nodes.forEach { node ->
                 val file = java.io.File(node.templatePath)
                 if (!file.exists()) {
                     missingTemplates.add(node.templatePath)
                 }
-                checkNodes(node.children)
+                checkIfNodeExists(node.children)
             }
         }
 
-        checkNodes(this.nodes)
+        checkIfNodeExists(this.nodes)
         return missingTemplates.toList()
     }
 

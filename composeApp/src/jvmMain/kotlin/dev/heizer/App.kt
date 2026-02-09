@@ -14,7 +14,10 @@ import androidx.compose.ui.unit.dp
 import dev.heizer.core.document.Document
 import dev.heizer.core.document.DocumentNode
 import dev.heizer.core.document.DocumentNodeDefinition
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import dev.heizer.ui.EditorViewModel
+import dev.heizer.ui.theme.DocAssemblerTheme
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -24,23 +27,39 @@ import kotlin.uuid.Uuid
 fun App() {
     val viewModel = remember { EditorViewModel() }
 
-    MaterialTheme {
+    DocAssemblerTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column {
                 // Header
-                TopAppBar(
-                    title = {
-                        Text("DocAssembler")
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.isSettingsOpen = true }) {
-                            Text("⚙")
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                "DOC ASSEMBLER",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Light,
+                                    letterSpacing = 3.sp
+                                )
+                            )
+                        },
+                        actions = {
+                            IconButton(onClick = { viewModel.isSettingsOpen = true }) {
+                                Text("⚙")
+                            }
+                            Button(
+                                onClick = { viewModel.generateDocument() },
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            ) {
+                                Text("GERAR DOCUMENTO")
+                            }
                         }
-                        Button(onClick = { viewModel.generateDocument() }) {
-                            Text("Gerar Documento")
-                        }
-                    }
-                )
+                    )
+                }
 
                 if (viewModel.isSettingsOpen) {
                     SettingsScreen(viewModel)
@@ -92,13 +111,17 @@ fun App() {
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Esquerda: Árvore do Documento
-                    Box(
-                        modifier = Modifier.weight(0.4f).fillMaxHeight().background(Color.LightGray.copy(alpha = 0.2f))
-                            .padding(8.dp)
+                    Surface(
+                        modifier = Modifier.weight(0.7f).fillMaxHeight(),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     ) {
-                        Column {
-                            Text("Estrutura do Documento", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "ESTRUTURA",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
                             TreeView(
                                 viewModel.document,
                                 viewModel.selectedNodeId,
@@ -108,19 +131,39 @@ fun App() {
                     }
 
                     // Direita: Lista de ComponentDefinition
-                    Column(modifier = Modifier.weight(0.6f).fillMaxHeight().padding(8.dp)) {
-                        Text("Componentes Disponíveis", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyColumn {
+                    Column(modifier = Modifier.weight(0.3f).fillMaxHeight().padding(16.dp)) {
+                        Text(
+                            "COMPONENTES",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                        ) {
                             items(viewModel.registry.definitions) { def: DocumentNodeDefinition ->
                                 Card(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                        .clickable { viewModel.addComponent(def) }
+                                    modifier = Modifier.fillMaxWidth()
+                                        .clickable { viewModel.addComponent(def) },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    shape = MaterialTheme.shapes.medium,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(def.name, style = MaterialTheme.typography.titleSmall)
+                                        Text(
+                                            def.name.uppercase(),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                         if (def.description.isNotEmpty()) {
-                                            Text(def.description, style = MaterialTheme.typography.bodySmall)
+                                            Text(
+                                                def.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
                                         }
                                     }
                                 }
@@ -136,22 +179,31 @@ fun App() {
 @OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, onDelete: (DocumentNode) -> Unit) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val isRootSelected = selectedId == null
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
                 .clickable { onSelect(null) },
-            color = if (isRootSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-            shape = MaterialTheme.shapes.small
+            color = if (isRootSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            shape = MaterialTheme.shapes.medium
         ) {
-            Text(
-                text = "📁 ${document.metadata.name} (Raíz)",
-                modifier = Modifier.padding(8.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isRootSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "📁",
+                    modifier = Modifier.padding(end = 12.dp),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = document.metadata.name.uppercase(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isRootSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isRootSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
         document.nodes.forEach { node ->
             NodeView(node, selectedId, onSelect, onDelete)
@@ -162,41 +214,44 @@ fun TreeView(document: Document, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, o
 @OptIn(ExperimentalUuidApi::class)
 @Composable
 fun NodeView(node: DocumentNode, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, onDelete: (DocumentNode) -> Unit) {
-    Column(modifier = Modifier.padding(start = 16.dp)) {
+    Column(modifier = Modifier.padding(start = 24.dp)) {
         val isSelected = node.id == selectedId
 
-        Card(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp)
                 .clickable { onSelect(node.id) },
-            colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(
-                    alpha = 0.5f
-                )
-            ),
-            elevation = if (isSelected) CardDefaults.cardElevation(defaultElevation = 4.dp) else CardDefaults.cardElevation(
-                defaultElevation = 0.dp
-            )
+            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            shape = MaterialTheme.shapes.medium,
+            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
         ) {
             Row(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "📄",
-                    modifier = Modifier.padding(end = 8.dp)
+                    text = "—",
+                    modifier = Modifier.padding(end = 12.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                 )
-                Text(
-                    text = "ID: ${node.id} - ${node.templatePath.split("/").last()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = node.templatePath.split("/").last().uppercase(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = node.id.toString(),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = (if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.5f)
+                    )
+                }
                 IconButton(onClick = { onDelete(node) }, modifier = Modifier.size(24.dp)) {
                     Text(
-                        text = "X",
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
+                        text = "✕",
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -213,7 +268,14 @@ fun NodeView(node: DocumentNode, selectedId: Uuid?, onSelect: (Uuid?) -> Unit, o
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(title: @Composable () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
-    CenterAlignedTopAppBar(title = title, actions = actions)
+    TopAppBar(
+        title = title,
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
+        )
+    )
 }
 
 @Composable
@@ -224,44 +286,68 @@ fun SettingsScreen(viewModel: EditorViewModel) {
         onDismissRequest = { viewModel.isSettingsOpen = false },
         confirmButton = {
             TextButton(onClick = { viewModel.isSettingsOpen = false }) {
-                Text("Fechar")
+                Text("FECHAR")
             }
         },
-        title = { Text("Configurações") },
+        title = {
+            Text(
+                "CONFIGURAÇÕES",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Light,
+                letterSpacing = 2.sp
+            )
+        },
         text = {
             Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                Text("Modelo Base", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = viewModel.registry.customBaseTemplateEnabled,
-                        onCheckedChange = { checked -> viewModel.setCustomTemplateEnabled(checked) }
-                    )
-                    Text("Usar modelo-base personalizado")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = { viewModel.pickCustomTemplateFile() },
-                        enabled = viewModel.registry.customBaseTemplateEnabled
-                    ) {
-                        Text("Selecionar Arquivo .docx")
+                Text(
+                    "MODELO BASE",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = viewModel.registry.customBaseTemplateEnabled,
+                                onCheckedChange = { checked -> viewModel.setCustomTemplateEnabled(checked) }
+                            )
+                            Text("Usar modelo-base personalizado", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Button(
+                                onClick = { viewModel.pickCustomTemplateFile() },
+                                enabled = viewModel.registry.customBaseTemplateEnabled,
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text("SELECIONAR .DOCX")
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = viewModel.registry.customBaseTemplatePath.ifBlank { "Nenhum arquivo" }.split("/").last(),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = viewModel.registry.customBaseTemplatePath.ifBlank { "Nenhum arquivo selecionado" },
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f)
-                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Templates de Componentes", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "TEMPLATES DE COMPONENTES",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     IconButton(onClick = {
                         showEditDialog = DocumentNodeDefinition(
                             id = UUID.randomUUID().toString(),
@@ -270,25 +356,37 @@ fun SettingsScreen(viewModel: EditorViewModel) {
                             templateDocPath = ""
                         )
                     }) {
-                        Text("+")
+                        Text("+", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
 
-                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     items(viewModel.registry.definitions) { definition ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                            shape = MaterialTheme.shapes.small
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(definition.name, style = MaterialTheme.typography.bodyLarge)
-                                Text(definition.description, style = MaterialTheme.typography.bodySmall)
-                            }
-                            IconButton(onClick = { showEditDialog = definition }) {
-                                Text("✎")
-                            }
-                            IconButton(onClick = { viewModel.deleteDefinition(definition.id) }) {
-                                Text("🗑", style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.error))
+                            Row(
+                                modifier = Modifier.padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(definition.name.uppercase(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                    if (definition.description.isNotEmpty()) {
+                                        Text(definition.description, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                IconButton(onClick = { showEditDialog = definition }, modifier = Modifier.size(32.dp)) {
+                                    Text("✎")
+                                }
+                                IconButton(onClick = { viewModel.deleteDefinition(definition.id) }, modifier = Modifier.size(32.dp)) {
+                                    Text("🗑", color = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -323,26 +421,69 @@ fun DefinitionEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (definition.name.isEmpty()) "Novo Componente" else "Editar Componente") },
+        title = {
+            Text(
+                if (definition.name.isEmpty()) "NOVO COMPONENTE" else "EDITAR COMPONENTE",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Light
+            )
+        },
         text = {
-            Column {
-                TextField(value = name, onValueChange = { name = it }, label = { Text("Nome") })
-                TextField(value = description, onValueChange = { description = it }, label = { Text("Descrição") })
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { onPickFile { path = it } }) {
-                        Text("Selecionar Arquivo")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        path.split("/").last().ifBlank { "Nenhum arquivo" },
-                        style = MaterialTheme.typography.bodySmall
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("NOME") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color(0xFFF2F2F2),
+                        focusedContainerColor = Color(0xFFF2F2F2),
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
                     )
+                )
+                TextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("DESCRIÇÃO") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color(0xFFF2F2F2),
+                        focusedContainerColor = Color(0xFFF2F2F2),
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    )
+                )
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { onPickFile { path = it } },
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text("ARQUIVO")
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            path.split("/").last().ifBlank { "Nenhum arquivo" },
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     onConfirm(
                         definition.copy(
@@ -352,14 +493,15 @@ fun DefinitionEditDialog(
                         )
                     )
                 },
-                enabled = name.isNotBlank() && path.isNotBlank()
+                enabled = name.isNotBlank() && path.isNotBlank(),
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text("Salvar")
+                Text("SALVAR")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text("CANCELAR")
             }
         }
     )
